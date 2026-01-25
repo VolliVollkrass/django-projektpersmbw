@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Personal{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto ">Personal</h1>
+      <div class="flex-none ">
+        <a class="btn btn-primary" href="{% url "home" %}">Dashboard</a>
+        <a class="btn btn-error " href="{% url "personal_create" %}">Add-⊕</a>
+
+      </div>
+    </div>
+  <div class="flex space-x-2 p-4">
+    <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+      <form method="get" action="{% url 'personal' %}">
+        <label class="input input-bordered flex items-center gap-2">
+
+          <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <g
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              stroke-width="2.5"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </g>
+          </svg>
+
+          <input
+            type="search"
+            name="q"
+            value="{{ query }}"
+            required
+            placeholder="Personalnummer, Vorname oder Nachname"
+            class="grow"
+          />
+
+        </label>
+      </form>
+      <a href="{% url 'personal' %}" class="btn btn-ghost">
+        ✖ Zurücksetzen
+      </a>
+
+
+      <div class="divider divider-primary">Navigation</div>
+
+      {% include "includes/sidemenu.html" %}
+    </div>
+    <div class="flex-4/5 p-4 border border-base-200  rounded-box shadow-lg ">
+
+      <div class="w-full mt-2 border-base-200 rounded-box">
+        <div class="h-150 overflow-x-auto">
+          <table class="table table-sm ">
+            <thead>
+              <tr>
+                <th></th>
+                <th>PerNr</th>
+                <th>Name</th>
+                <th>E-Mail</th>
+                <th>Telefon</th>
+                <th>Besoldung</th>
+                <th>Einsatz</th>
+                <th>Umfang</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in mitarbeiters %}
+              <tr>
+                
+                <th>{{ forloop.counter}}</th>
+                <td><a class="link link-hover link-info" href="{% url "person_detail" m.pk %}"> {{ m.personalnummer }}</a></td>
+                <td>{{ m.vorname }} {{ m.nachname }}</td>
+                <td>{{ m.email }}</td>
+                <td>{{ m.telefon_privat }}</td>
+                <td>{{ m.status_besoldung }}</td>
+                  <!-- EINSATZ -->
+                <td>
+                  {% for einsatz in m.einsaetze.all %}
+                    <div>
+                      <a class="link link-hover link-info" href="{% url 'einsatz_detail' einsatz.pk %}">
+                        {{ einsatz.stelle.name }}
+                      </a>
+                    </div>
+                  {% empty %}
+                    <span class="text-gray-400 italic">kein aktueller Einsatz</span>
+                  {% endfor %}
+                </td>
+
+                <!-- UMFANG -->
+                <td>
+                  {% for einsatz in m.einsaetze.all %}
+                      <div>{{ einsatz.umfang|floatformat:2 }}</div>
+                      {# alternativ: {{ einsatz.umfang_prozent|floatformat:0 }} % #}
+                  {% empty %}
+                      —
+                  {% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

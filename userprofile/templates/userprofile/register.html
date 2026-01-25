@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Registrieren{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto  p-6">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">Registrieren</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        
+        {% for field in form %}
+        <div class="mb-4">
+            <label class="block text-gray-700">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <p class="text-red-600 text-sm">{{ field.errors }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <button type="submit"
+                class="w-full btn btn-success py-2">
+            Registrieren
+        </button>
+    </form>
+    <p class="mt-4 text-center">
+        Schon registriert? <a href="{% url 'login' %}" class="link link-primary">Login</a>
+    </p>
+    
+</div>
+{% endblock %}

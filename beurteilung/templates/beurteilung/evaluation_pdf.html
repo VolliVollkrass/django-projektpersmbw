@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 12px;
+        }
+        h1 {
+            border-bottom: 2px solid #333;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .label {
+            font-weight: bold;
+        }
+        .signature {
+            font-family: monospace;
+            word-break: break-all;
+            background: #f4f4f4;
+            padding: 10px;
+        }
+        .valid {
+            color: green;
+            font-weight: bold;
+        }
+        .invalid {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Beurteilung</h1>
+
+<div class="section">
+    <p><span class="label">Person:</span>
+       {{ evaluation.evaluation_request.person }}</p>
+
+    <p><span class="label">Vorgesetzter:</span>
+       {{ evaluation.evaluation_request.supervisor }}</p>
+
+    <p><span class="label">Abgegeben am:</span>
+       {{ evaluation.submitted_at }}</p>
+</div>
+
+<div class="section">
+    <p><span class="label">Bewertung:</span>
+       {{ evaluation.rating }}</p>
+
+    <p><span class="label">Kommentar:</span><br>
+       {{ evaluation.comment }}</p>
+</div>
+
+<div class="section">
+    <p><span class="label">Vorgangs-ID:</span>
+       {{ evaluation.evaluation_request.id }}</p>
+
+    <p><span class="label">Token:</span>
+       {{ evaluation.evaluation_request.token }}</p>
+</div>
+
+<div class="section">
+    <p><span class="label">Digitale Signatur (SHA-256):</span></p>
+
+    <div class="signature">
+        {{ evaluation.signature }}
+    </div>
+
+    {% if signature_valid %}
+        <p class="valid">✔ Signatur gültig – Inhalt unverändert</p>
+    {% else %}
+        <p class="invalid">❌ Signatur ungültig – Manipulation erkannt</p>
+    {% endif %}
+</div>
+
+<hr>
+
+<p style="font-size: 10px;">
+Dieses Dokument wurde elektronisch erzeugt und digital signiert.
+Eine nachträgliche Änderung des Inhalts macht die Signatur ungültig.
+</p>
+
+</body>
+</html>

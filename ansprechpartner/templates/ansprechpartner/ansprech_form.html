@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ansprechpartner anlegen{% endblock %}
+
+{% block content %}
+
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+        <h1 class="text-3xl font-bold flex-auto ">
+            {% if modus == "edit" %}
+                Ansprechpartner*in bearbeiten
+            {% else %}
+                Neue Ansprechpartner*in anlegen
+            {% endif %}
+        </h1>
+        <a href="{% url 'ansprech' %}"
+        class="flex-none btn btn-secondary ">
+            ← Zur Übersicht
+        </a>
+    </div>
+
+    <form method="post" class="space-y-6 p-6">
+        {% csrf_token %}
+        <!-- 🔹 Grunddaten -->
+        <div class="bg-base-100 border border-base-200 p-6 rounded-box shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Grunddaten</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {% include "personal/partials/form_field.html" with field=form.geschlecht %}
+                {% include "personal/partials/form_field.html" with field=form.vorname %}
+                {% include "personal/partials/form_field.html" with field=form.nachname %}
+
+            </div>
+        </div>
+
+        <!-- 🔹 Kontaktdaten -->
+        <div class="bg-base-100 border border-base-200 p-6 rounded-box shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Kontaktdaten</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {% include "personal/partials/form_field.html" with field=form.email %}
+                {% include "personal/partials/form_field.html" with field=form.telefon %}
+
+            </div>
+        </div>
+
+
+        <!-- 🔹 Verwaltung -->
+        <div class="bg-base-100 border border-base-200 p-6 rounded-box shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Verwaltung</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+
+                <div class="flex items-center gap-3 mt-6">
+                    <label for="{{ form.aktiv.id_for_label }}" class="text-sm font-medium text-gray-700">
+                        {{ form.aktiv.label }}
+                    </label>
+                    <div>
+                        {{ form.aktiv }}
+                    </div>
+                    
+                </div>
+                {% include "personal/partials/form_field.html" with field=form.notiz %}
+            </div>
+            
+        </div>
+        <!-- 🔹 Buttons -->
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'ansprech' %}"
+            class="btn btn-secondary">
+                Abbrechen
+            </a>
+            <button type="submit"
+                class=" btn btn-primary">
+                {% if modus == "edit" %} Änderungen speichern {% else %} Ansprechpartner*in anlegen {% endif %}
+            </button>
+
+        </div>
+
+    </form>  
+    </div>
+</div>
+{% endblock %}

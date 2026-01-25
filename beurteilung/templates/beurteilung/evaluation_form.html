@@ -1,0 +1,8 @@
+<h1>   Beurteilung für {{ person }}</h1>
+<p>Vorgesetzter: {{ supervisor }}</p> 
+
+<form method="post">
+    {%  csrf_token %}
+    {{form.as_p}}
+    <button type="submit"> Absenden</button>
+</form>

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Einrichtung - {{ einrichtung.einrichtungs_id }}{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+    <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+        <div class="p-6 flex">
+            <h1 class="text-3xl font-bold flex-auto ">Einrichtung</h1>
+            <div class="flex-none ">
+                <a class="btn btn-primary" href="{% url "einrichtung" %}">Liste</a>
+                <a class="btn btn-error " href="{% url "einrichtung_create" %}">Add-⊕</a>
+
+            </div>
+        </div>
+          <div class="flex space-x-2 p-4">
+    <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+      <label class="input">
+        <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <g
+            stroke-linejoin="round"
+            stroke-linecap="round"
+            stroke-width="2.5"
+            fill="none"
+            stroke="currentColor"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </g>
+        </svg>
+        <input type="search" required placeholder="Search" />
+      </label>
+
+      <div class="divider divider-primary">Navigation</div>
+      {% include "includes/sidemenu.html" %}
+
+
+    </div>
+    <div class="flex-4/5 p-4 border border-base-200  rounded-box shadow-lg ">
+                  <!-- Header Card -->
+        <div class="card bg-base-100 shadow-xl mb-6">
+            <div class="card-body flex flex-col md:flex-row items-center gap-6">
+
+            <div class="avatar">
+                <div class="w-32 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                <img src="{{ einrichtung.profilbild.url }}" alt="">
+                </div>
+            </div>
+
+            <div class="flex-1">
+                <h2 class="text-3xl font-bold">{{ einrichtung.name }}</h2>
+                <p class="text-lg opacity-70">{{ einrichtung.einrichtungs_id }}</p>
+
+                <div class="mt-2">
+                <span class="badge badge-success">Aktiv</span>
+                <span class="badge badge-outline ml-2">{{ einrichtung.get_einrichtung_art_display }}</span>
+                </div>
+            </div>
+
+            <div class="card-actions">
+                <a href="{% url "einrichtung_edit" einrichtung.pk %}" class="btn btn-primary">Bearbeiten</a>
+            </div>
+
+            </div>
+        </div>
+
+      <div class="tabs tabs-lift">
+        <input type="radio" name="my_tabs_3" class="tab" aria-label="Person" checked="checked" />
+        <div class="tab-content bg-base-100 border-base-300 p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title">👤 Anschrift </h3>
+                        <div class="divider"></div>
+
+                        <p class=""><strong>Adresse:</strong> {{ einrichtung.strasse }} <br>{{ einrichtung.plz }} {{ einrichtung.ort }}</p>
+                        <p><strong>Ansprechperson:</strong> {{ einrichtung.ansprechpartner.vorname }} {{ einrichtung.ansprechpartner.nachname }}</p>
+                        <p><strong>Telefonnummer:</strong> {{ einrichtung.ansprechpartner.telefon  }}</p>
+                        <p><strong>E-Mail:</strong> {{ einrichtung.ansprechpartner.email }}</p>
+                    </div>
+                </div>
+                                    <!-- Berufliche Daten -->
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title">💼 Träger Bemerkungen</h3>
+                        <div class="divider"></div>
+                        <p><strong>Bemerkung:</strong> {{ einrichtung.bemerkung }}</p>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+                    
+
+        <input type="radio" name="my_tabs_3" class="tab" aria-label="Dokumente" />
+        <div class="tab-content bg-base-100 border-base-300 p-6">Hier sollen alle nötigen Dokumente hinterlegt werden</div>
+        
+        <input type="radio" name="my_tabs_3" class="tab" aria-label="Löschen" />
+        <div class="tab-content bg-base-100 border-error p-6">
+          <div class="flex p-10 items-center justify-center bg-base-200 rounded-box">
+
+            <div class="card max-h-md w-full max-w-md bg-base-100 shadow-xl">
+              <div class="card-body">
+                <h2 class="card-title text-error">Datensatz löschen</h2>
+
+                <p>
+                  Möchtest du <span class="font-bold">{{ einrichtung.einrichtungs_id }} - {{ einrichtung.name}} </span> wirklich löschen?
+                </p>
+
+                <div class="alert alert-warning text-sm">
+                  Tippe <span class="font-bold">Löschen</span>, um den Vorgang zu bestätigen.
+                </div>
+
+                <form method="post" action="{% url 'einrichtung_delete' einrichtung.pk %}" class="space-y-4">
+                  {% csrf_token %}
+
+                  <input 
+                    type="text" 
+                    name="confirm_text"
+                    placeholder='Schreibe "Löschen"'
+                    class="input input-bordered w-full"
+                    required
+                  >
+
+                  <div class="card-actions justify-between">
+                    <a href="{% url 'einrichtung_detail' einrichtung.pk %}" class="btn btn-ghost">
+                      Abbrechen
+                    </a>
+
+                    <button type="submit" class="btn btn-error">
+                      Endgültig löschen
+                    </button>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+</div>
+<script>
+  const input = document.querySelector("input[name='confirm_text']");
+  const button = document.querySelector("button[type='submit']");
+
+  button.disabled = true;
+
+  input.addEventListener("input", () => {
+    button.disabled = input.value !== "Löschen";
+  });
+</script>
+
+
+{% endblock %}
