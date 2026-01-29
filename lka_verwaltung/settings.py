@@ -33,6 +33,12 @@ DEBUG = os.getenv("DEBUG") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
+# 30 Minuten = 1800 Sekunden
+SESSION_COOKIE_AGE = 1800
+
+# Session wird bei jeder Anfrage erneuert (bei Aktivität)
+SESSION_SAVE_EVERY_REQUEST = True
+
 
 # Application definition
 
@@ -51,6 +57,7 @@ INSTALLED_APPS = [
     'traeger',
     'einsatz',
     'beurteilung',
+    'mbw',
 ]
 
 MIDDLEWARE = [
@@ -140,6 +147,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")

@@ -47,12 +47,16 @@
             </div>
 
             <div class="flex-1">
-                <h2 class="text-3xl font-bold">{{ einsatz.mitarbeiter.vorname }}</h2>
+                <h2 class="text-3xl font-bold">{{ einsatz.stelle.position}}</h2>
                 <p class="text-lg opacity-70">{{ einsatz.stelle.name}}</p>
 
                 <div class="mt-2">
-                <span class="badge badge-success">Aktiv</span>
-                <span class="badge badge-outline ml-2">{{ einsatz.beginn}}</span>
+                {% if einsatz.aktiv %}
+                    <span class="badge badge-success">aktiv</span>
+                {% else %}
+                    <span class="badge badge-secondary">nicht aktiv</span>
+                {% endif %}
+                <span class="badge badge-outline ml-2">{{ einsatz.stelle.stellen_id}}</span>
                 </div>
             </div>
 

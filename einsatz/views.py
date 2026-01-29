@@ -16,6 +16,7 @@ def einsatz(request):
         einsaetze = einsaetze.filter(
             Q(mitarbeiter__icontains=query) |
             Q(beginn__icontains=query) |
+            Q(abrechnung__icontains=query) |
             Q(ende__icontains=query)
         )
 

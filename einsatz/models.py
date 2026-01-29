@@ -14,6 +14,8 @@ class Einsatz(models.Model):
     ende = models.DateField(null=True, blank=True)
 
     umfang = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("1.00"))
+
+    abrechnung = models.BooleanField("Abrechnung über LKA", default=False)
     
     aktiv = models.BooleanField(default=True)
     bemerkung = models.TextField(blank=True)

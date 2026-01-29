@@ -1,0 +1,15 @@
+<h1>Aktive Einsätze</h1>
+
+<ul>
+  {% for einsatz in einsaetze %}
+    <li>
+      <strong>{{ einsatz.stelle }}</strong><br>
+      Mitarbeiter: {{ einsatz.mitarbeiter }}<br>
+      Beginn: {{ einsatz.beginn }}<br>
+      Ende: {{ einsatz.ende|default:"offen" }}<br>
+      Umfang: {{ einsatz.umfang_prozent }} %
+    </li>
+  {% empty %}
+    <li>Keine aktiven Einsätze vorhanden.</li>
+  {% endfor %}
+</ul>

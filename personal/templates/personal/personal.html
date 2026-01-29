@@ -69,11 +69,11 @@
             </thead>
             <tbody>
               {% for m in mitarbeiters %}
-              <tr>
+                <tr>
                 
                 <th>{{ forloop.counter}}</th>
                 <td><a class="link link-hover link-info" href="{% url "person_detail" m.pk %}"> {{ m.personalnummer }}</a></td>
-                <td>{{ m.vorname }} {{ m.nachname }}</td>
+                <td><a href="{% url "person_detail" m.pk %}">{{ m.vorname }} {{ m.nachname }}</a></td>
                 <td>{{ m.email }}</td>
                 <td>{{ m.telefon_privat }}</td>
                 <td>{{ m.status_besoldung }}</td>
@@ -82,7 +82,7 @@
                   {% for einsatz in m.einsaetze.all %}
                     <div>
                       <a class="link link-hover link-info" href="{% url 'einsatz_detail' einsatz.pk %}">
-                        {{ einsatz.stelle.name }}
+                        {{ einsatz.stelle.position }}
                       </a>
                     </div>
                   {% empty %}
