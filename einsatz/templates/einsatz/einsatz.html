@@ -62,6 +62,7 @@
                 <th>Umfang</th>
                 <th>Beginn</th>
                 <th>Ende</th>
+                <th>Abrechnung</th>
               </tr>
             </thead>
             <tbody>
@@ -74,7 +75,13 @@
                 <td>{{ e.umfang}}</td>
                 <td>{{ e.beginn}}</td>
                 <td>{{ e.ende }}</td>
-                
+                <td>
+                  {% if e.abrechnung %}
+                    <span class="badge badge-warning">Ja</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Nein</span>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
               

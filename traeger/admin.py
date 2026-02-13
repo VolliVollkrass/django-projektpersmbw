@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import Traeger, Stelle, Einrichtung
+from import_export.admin import ImportExportModelAdmin
+from .resources import TraegerResource, EinrichtungResource, StelleResource
 
 
 
@@ -9,7 +11,8 @@ class StelleInline(admin.TabularInline):
     show_change_link = True
 
 @admin.register(Traeger)
-class TraegerAdmin(admin.ModelAdmin):
+class TraegerAdmin(ImportExportModelAdmin):
+    resource_class = TraegerResource
     list_display = (
         "name",
         "art",
@@ -47,7 +50,8 @@ class TraegerAdmin(admin.ModelAdmin):
 
 
 @admin.register(Stelle)
-class StelleAdmin(admin.ModelAdmin):
+class StelleAdmin(ImportExportModelAdmin):
+    resource_class = StelleResource
     # Spalten in der Listenansicht
     list_display = (
         "name",
@@ -102,11 +106,13 @@ class StelleAdmin(admin.ModelAdmin):
     )
 
 @admin.register(Einrichtung)
-class EinrichtungAdmin(admin.ModelAdmin):
+class EinrichtungAdmin(ImportExportModelAdmin):
+    resource_class = EinrichtungResource
     list_display = (
         "name",
         "einrichtungs_id",
         "traeger",
+        "ansprechpartner",
         "ort",
         "aktiv",
         "erstellt_am",
@@ -133,7 +139,7 @@ class EinrichtungAdmin(admin.ModelAdmin):
             "fields": ("traeger", "name", "einrichtungs_id", "aktiv")
         }),
         ("Adresse", {
-            "fields": ("strasse", "plz", "ort"),
+            "fields": ("strasse", "plz", "ort", "ansprechpartner"),
         }),
         ("Bemerkung", {
             "fields": ("bemerkung", "versorgungsumlage"),

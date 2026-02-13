@@ -56,6 +56,11 @@
                 {% else %}
                     <span class="badge badge-secondary">nicht aktiv</span>
                 {% endif %}
+                {% if einsatz.abrechnung %}
+                    <span class="badge badge-warning">abrechnen</span>
+                {% else %}
+                    <span class="badge badge-secondary">nicht abrechnen</span>
+                {% endif %}
                 <span class="badge badge-outline ml-2">{{ einsatz.stelle.stellen_id}}</span>
                 </div>
             </div>

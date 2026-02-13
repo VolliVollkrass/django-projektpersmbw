@@ -1,9 +1,13 @@
 from django.contrib import admin
 from .models import Ansprechpartner
+from import_export.admin import ImportExportModelAdmin
+from .resources import AnsprechpartnerResource
+
 
 
 @admin.register(Ansprechpartner)
-class AnsprechpartnerAdmin(admin.ModelAdmin):
+class AnsprechpartnerAdmin(ImportExportModelAdmin):
+    resource_class = AnsprechpartnerResource
     list_display = (
         "nachname",
         "vorname",
