@@ -126,7 +126,7 @@ class Stelle(models.Model):
     geaendert_am = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.name} - {self.position}"
+        return f"{self.einrichtung.traeger.name} - {self.name} - {self.position} "
     
     class Meta:
         verbose_name = "Stellen"

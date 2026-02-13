@@ -7,6 +7,11 @@ GESCHLECHT = [
     ]
 
 class Ansprechpartner(models.Model):
+    GESCHLECHT = [
+        ('w', 'weiblich'),
+        ('m', 'männlich'),
+        ('d', 'divers'),
+        ]
     
     geschlecht = models.CharField("Geschlecht", max_length=1,choices=GESCHLECHT, default="m")
     vorname = models.CharField("Vorname", max_length=100)

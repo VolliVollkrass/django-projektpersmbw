@@ -6,6 +6,12 @@ from decimal import Decimal
 
 class TraegerForm(forms.ModelForm):
     # Zusätzliche Felder für neuen Ansprechpartner
+    neuer_ansprechpartner_geschlecht = forms.ChoiceField(
+        choices=Ansprechpartner.GESCHLECHT,
+        required=False,
+        label="Geschlecht",
+        widget=forms.Select()
+    )
     neuer_ansprechpartner_vorname = forms.CharField(
         required=False, label="Vorname"
     )
@@ -42,6 +48,7 @@ class TraegerForm(forms.ModelForm):
         traeger = super().save(commit=False)
 
         # Prüfen, ob neuer Ansprechpartner angelegt werden soll
+        geschlecht = self.cleaned_data.get("neuer_ansprechpartner_geschlecht")
         vorname = self.cleaned_data.get("neuer_ansprechpartner_vorname")
         nachname = self.cleaned_data.get("neuer_ansprechpartner_nachname")
         email = self.cleaned_data.get("neuer_ansprechpartner_email")
@@ -49,6 +56,7 @@ class TraegerForm(forms.ModelForm):
 
         if vorname and nachname:
             neuer_ansprechpartner = Ansprechpartner.objects.create(
+                geschlecht=geschlecht,
                 vorname=vorname,
                 nachname=nachname,
                 email=email,
@@ -63,6 +71,12 @@ class TraegerForm(forms.ModelForm):
 
 
 class StellenForm(forms.ModelForm):
+    neuer_ansprechpartner_geschlecht = forms.ChoiceField(
+        choices=Ansprechpartner.GESCHLECHT,
+        required=False,
+        label="Geschlecht",
+        widget=forms.Select()
+    )
     neuer_ansprechpartner_vorname = forms.CharField(required=False, label="Vorname")
     neuer_ansprechpartner_nachname = forms.CharField(required=False, label="Nachname")
     neuer_ansprechpartner_email = forms.EmailField(required=False, label="E-Mail")
@@ -90,6 +104,7 @@ class StellenForm(forms.ModelForm):
         stelle = super().save(commit=False)
 
         # Neue Person aus Zusatzfeldern
+        geschlecht = self.cleaned_data.get("neuer_ansprechpartner_geschlecht")
         vorname = self.cleaned_data.get("neuer_ansprechpartner_vorname")
         nachname = self.cleaned_data.get("neuer_ansprechpartner_nachname")
         email = self.cleaned_data.get("neuer_ansprechpartner_email")
@@ -97,6 +112,7 @@ class StellenForm(forms.ModelForm):
 
         if vorname and nachname:
             neuer_ansprechpartner = Ansprechpartner.objects.create(
+                geschlecht=geschlecht,
                 vorname=vorname,
                 nachname=nachname,
                 email=email,
@@ -113,6 +129,12 @@ class StellenForm(forms.ModelForm):
 
 class EinrichtungForm(forms.ModelForm):
     # Zusätzliche Felder für neuen Ansprechpartner
+    neuer_ansprechpartner_geschlecht = forms.ChoiceField(
+        choices=Ansprechpartner.GESCHLECHT,
+        required=False,
+        label="Geschlecht",
+        widget=forms.Select()
+    )
     neuer_ansprechpartner_vorname = forms.CharField(
         required=False, label="Vorname"
     )
@@ -149,6 +171,7 @@ class EinrichtungForm(forms.ModelForm):
         einrichtung = super().save(commit=False)
 
         # Prüfen, ob neuer Ansprechpartner angelegt werden soll
+        geschlecht = self.cleaned_data.get("neuer_ansprechpartner_geschlecht")
         vorname = self.cleaned_data.get("neuer_ansprechpartner_vorname")
         nachname = self.cleaned_data.get("neuer_ansprechpartner_nachname")
         email = self.cleaned_data.get("neuer_ansprechpartner_email")
@@ -156,6 +179,7 @@ class EinrichtungForm(forms.ModelForm):
 
         if vorname and nachname:
             neuer_ansprechpartner = Ansprechpartner.objects.create(
+                geschlecht=geschlecht,
                 vorname=vorname,
                 nachname=nachname,
                 email=email,

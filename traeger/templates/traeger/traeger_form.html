@@ -63,6 +63,7 @@
                 </p>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% include "personal/partials/form_field.html" with field=form.neuer_ansprechpartner_geschlecht %}
                     {% include "personal/partials/form_field.html" with field=form.neuer_ansprechpartner_vorname %}
                     {% include "personal/partials/form_field.html" with field=form.neuer_ansprechpartner_nachname %}
                     {% include "personal/partials/form_field.html" with field=form.neuer_ansprechpartner_email %}
