@@ -68,7 +68,7 @@
             <tbody>
               {% for e in einsaetze %}
               <tr>
-                
+
                 <th>{{ forloop.counter}}</th>
                 <td><a class="link link-hover link-info" href="{% url "einsatz_detail" e.pk %}"> {{ e.stelle.name }}</a></td>
                 <td>{{ e.mitarbeiter.vorname}}</td>
@@ -76,15 +76,14 @@
                 <td>{{ e.beginn}}</td>
                 <td>{{ e.ende }}</td>
                 <td>
-                  {% if e.abrechnung %}
-                    <span class="badge badge-warning">Ja</span>
-                  {% else %}
-                    <span class="badge badge-secondary">Nein</span>
-                  {% endif %}
+                  <form method="post" action="{% url 'einsatz_toggle_abrechnung' e.pk %}">
+                    {% csrf_token %}
+                    <input type="checkbox" class="toggle toggle-primary" {% if e.abrechnung %}checked{% endif %} onchange="this.form.submit()" />
+                  </form>
                 </td>
               </tr>
               {% endfor %}
-              
+
             </tbody>
           </table>
         </div>

@@ -40,8 +40,9 @@
           <li>
             <ul>
               <li><a href="{% url "abrechnungsliste" %}" class="">Abrechnungsliste</a></li>
-              <li><a href="/" class="">Innenaufträge</a></li>
-              <li><a href="/" class="">Hochrechnung</a></li>
+              <li><a href="{% url "innenauftraege" %}" class="">Innenaufträge</a></li>
+              <li><a href="{% url "quartalsuebersicht" %}" class="">Quartalsübersicht</a></li>
+              <li><a href="{% url "fakturierungsliste" %}" class="">Fakturierung</a></li>
               <li><a href="/" class="">Refinanzierungszuschuss</a></li>
             </ul>
           </li>

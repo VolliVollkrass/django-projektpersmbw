@@ -33,7 +33,7 @@ class EinsatzForm(forms.ModelForm):
             ),
             "aktiv": forms.CheckboxInput(
                 attrs={"class": "checkbox checkbox-primary"}
-    ),
+            ),
         }
 
     def __init__(self, *args, **kwargs):

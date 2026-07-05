@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Quartalsübersicht{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Quartalsübersicht Abrechnung</h1>
+      <div class="flex-none">
+        <a class="btn btn-primary" href="{% url "mbw" %}">MBW</a>
+      </div>
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <form method="get" action="{% url 'quartalsuebersicht' %}" class="space-y-2">
+          <label class="input input-bordered flex items-center gap-2">
+            <input type="search" name="q" value="{{ query }}" placeholder="Person, Stelle, IA" class="grow" />
+          </label>
+          <select name="jahr" class="select select-bordered w-full">
+            {% for j in jahre %}
+              <option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary w-full" type="submit">Filtern</button>
+        </form>
+        <a href="{% url 'quartalsuebersicht' %}?jahr={{ jahr }}" class="btn btn-ghost mt-2">✖ Zurücksetzen</a>
+
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 border border-base-200 rounded-box shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Stelle</th>
+                <th>Innenauftrag</th>
+                <th>Q1</th>
+                <th>Q2</th>
+                <th>Q3</th>
+                <th>Q4</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in zeilen %}
+              <tr>
+                <td>{{ row.einsatz.mitarbeiter.vorname }} {{ row.einsatz.mitarbeiter.nachname }}</td>
+                <td>{{ row.einsatz.stelle.name }}</td>
+                <td>
+                  {% if row.einsatz.innenauftrag %}
+                    {{ row.einsatz.innenauftrag.nummer }}
+                  {% else %}
+                    <span class="text-base-content/60">-</span>
+                  {% endif %}
+                </td>
+
+                {% with eintrag=row.q1 quartal=1 %}
+                <td>
+                  {% if eintrag %}
+                    <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
+                    <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                  {% else %}
+                    <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="jahr" value="{{ jahr }}" />
+                      <input type="hidden" name="quartal" value="{{ quartal }}" />
+                      <button type="submit" class="btn btn-xs btn-outline">Buchen</button>
+                    </form>
+                  {% endif %}
+                </td>
+                {% endwith %}
+
+                {% with eintrag=row.q2 quartal=2 %}
+                <td>
+                  {% if eintrag %}
+                    <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
+                    <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                  {% else %}
+                    <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="jahr" value="{{ jahr }}" />
+                      <input type="hidden" name="quartal" value="{{ quartal }}" />
+                      <button type="submit" class="btn btn-xs btn-outline">Buchen</button>
+                    </form>
+                  {% endif %}
+                </td>
+                {% endwith %}
+
+                {% with eintrag=row.q3 quartal=3 %}
+                <td>
+                  {% if eintrag %}
+                    <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
+                    <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                  {% else %}
+                    <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="jahr" value="{{ jahr }}" />
+                      <input type="hidden" name="quartal" value="{{ quartal }}" />
+                      <button type="submit" class="btn btn-xs btn-outline">Buchen</button>
+                    </form>
+                  {% endif %}
+                </td>
+                {% endwith %}
+
+                {% with eintrag=row.q4 quartal=4 %}
+                <td>
+                  {% if eintrag %}
+                    <div class="badge badge-warning">{{ eintrag.get_art_display }}</div>
+                    <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                  {% else %}
+                    <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="jahr" value="{{ jahr }}" />
+                      <input type="hidden" name="quartal" value="{{ quartal }}" />
+                      <button type="submit" class="btn btn-xs btn-outline">Buchen</button>
+                    </form>
+                  {% endif %}
+                </td>
+                {% endwith %}
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-base-content/60">Keine abrechnungspflichtigen Einsätze gefunden.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

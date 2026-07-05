@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Fakturierung{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Fakturierung & Debitoren</h1>
+      <div class="flex-none">
+        <a class="btn btn-primary" href="{% url "mbw" %}">MBW</a>
+      </div>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      Offene Debitoren ({{ jahr }}): {{ offene_debitoren }}
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <form method="get" action="{% url 'fakturierungsliste' %}" class="space-y-2">
+          <label class="input input-bordered flex items-center gap-2">
+            <input type="search" name="q" value="{{ query }}" placeholder="Person, Stelle, IA" class="grow" />
+          </label>
+          <select name="jahr" class="select select-bordered w-full">
+            {% for j in jahre %}
+              <option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary w-full" type="submit">Filtern</button>
+        </form>
+        <a href="{% url 'fakturierungsliste' %}?jahr={{ jahr }}" class="btn btn-ghost mt-2">✖ Zurücksetzen</a>
+
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 border border-base-200 rounded-box shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Stelle</th>
+                <th>Innenauftrag</th>
+                <th>SAP-Auftrag</th>
+                <th>Rechnung</th>
+                <th>Versand</th>
+                <th>Debitor</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in zeilen %}
+              <tr>
+                <td>{{ row.einsatz.mitarbeiter.vorname }} {{ row.einsatz.mitarbeiter.nachname }}</td>
+                <td>{{ row.einsatz.stelle.name }}</td>
+                <td>
+                  {% if row.einsatz.innenauftrag %}
+                    {{ row.einsatz.innenauftrag.nummer }}
+                  {% else %}
+                    <span class="text-base-content/60">-</span>
+                  {% endif %}
+                </td>
+                <td>{{ row.vorgang.sap_auftragsnummer|default:"-" }}</td>
+                <td>
+                  {% if row.vorgang %}
+                    {{ row.vorgang.rechnungsnummer|default:"-" }}
+                    {% if row.vorgang.rechnung_pdf %}
+                      <a class="link link-info text-xs" target="_blank" href="{{ row.vorgang.rechnung_pdf.url }}">PDF</a>
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.vorgang %}
+                    {{ row.vorgang.get_versandart_display|default:"-" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if row.vorgang %}
+                    {% if row.vorgang.debitor_status == "ausgeglichen" %}
+                      <span class="badge badge-success">{{ row.vorgang.get_debitor_status_display }}</span>
+                    {% elif row.vorgang.debitor_status == "teilweise" %}
+                      <span class="badge badge-warning">{{ row.vorgang.get_debitor_status_display }}</span>
+                    {% else %}
+                      <span class="badge badge-error">{{ row.vorgang.get_debitor_status_display }}</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge badge-ghost">noch offen</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a class="btn btn-xs btn-outline" href="{% url 'fakturierung_bearbeiten' row.einsatz.pk %}?jahr={{ jahr }}">Bearbeiten</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="text-center text-base-content/60">Keine abrechnungspflichtigen Einsätze gefunden.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

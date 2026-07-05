@@ -33,12 +33,19 @@ class TraegerForm(forms.ModelForm):
         ]
         widgets = {
             "bemerkung": forms.Textarea(attrs={"rows": 3}),
+            "aktiv": forms.CheckboxInput(
+                attrs={"class": "checkbox checkbox-primary"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         for field in self.fields.values():
+            # ❌ Checkboxen bekommen KEIN Input-Styling
+            if isinstance(field.widget, forms.CheckboxInput):
+                continue
+
             field.widget.attrs.update({
                 "class": "w-full px-3 py-2 border rounded-field focus:outline-none focus:ring focus:border-primary"
             })
@@ -90,12 +97,19 @@ class StellenForm(forms.ModelForm):
         ]
         widgets = {
             "bemerkung": forms.Textarea(attrs={"rows": 3}),
+            "aktiv": forms.CheckboxInput(
+                attrs={"class": "checkbox checkbox-primary"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         for field in self.fields.values():
+            # ❌ Checkboxen bekommen KEIN Input-Styling
+            if isinstance(field.widget, forms.CheckboxInput):
+                continue
+
             field.widget.attrs.update({
                 "class": "w-full px-3 py-2 border rounded-field focus:outline-none focus:ring focus:border-primary"
             })
@@ -156,12 +170,19 @@ class EinrichtungForm(forms.ModelForm):
         ]
         widgets = {
             "bemerkung": forms.Textarea(attrs={"rows": 3}),
+            "aktiv": forms.CheckboxInput(
+                attrs={"class": "checkbox checkbox-primary"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         for field in self.fields.values():
+            # ❌ Checkboxen bekommen KEIN Input-Styling
+            if isinstance(field.widget, forms.CheckboxInput):
+                continue
+            
             field.widget.attrs.update({
                 "class": "w-full px-3 py-2 border rounded-field focus:outline-none focus:ring focus:border-primary"
             })

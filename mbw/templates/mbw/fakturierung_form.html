@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Fakturierung bearbeiten{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Fakturierung bearbeiten</h1>
+      <a class="btn btn-neutral" href="{% url "fakturierungsliste" %}?jahr={{ jahr }}">Zur Liste</a>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {{ jahr }} | {{ einsatz.mitarbeiter.vorname }} {{ einsatz.mitarbeiter.nachname }} | {{ einsatz.stelle.name }}
+      {% if einsatz.innenauftrag %} | IA: {{ einsatz.innenauftrag.nummer }}{% endif %}
+    </div>
+
+    <div class="p-6">
+      <form method="post" enctype="multipart/form-data" class="space-y-4 max-w-3xl">
+        {% csrf_token %}
+        <input type="hidden" name="jahr" value="{{ jahr }}" />
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        {% for field in form %}
+          <div>
+            <label class="block mb-2 font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs mt-1">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="text-error text-sm mt-1">{{ field.errors|join:", " }}</p>{% endif %}
+          </div>
+        {% endfor %}
+
+        {% if vorgang.rechnung_pdf %}
+          <div class="text-sm">
+            Aktuelle PDF: <a class="link link-info" target="_blank" href="{{ vorgang.rechnung_pdf.url }}">anzeigen</a>
+          </div>
+        {% endif %}
+
+        <button class="btn btn-primary" type="submit">Speichern</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

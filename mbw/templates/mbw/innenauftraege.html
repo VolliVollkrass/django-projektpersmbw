@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Innenaufträge{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Innenaufträge</h1>
+      <div class="flex-none">
+        <a class="btn btn-neutral" href="{% url "mbw" %}">MBW</a>
+        <a class="btn btn-primary" href="{% url "innenauftrag_create" %}">Neu</a>
+      </div>
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <form method="get" action="{% url 'innenauftraege' %}" class="space-y-2">
+          <label class="input input-bordered flex items-center gap-2">
+            <input type="search" name="q" value="{{ query }}" placeholder="Nummer, Name, Stelle" class="grow" />
+          </label>
+          <select name="status" class="select select-bordered w-full">
+            <option value="alle" {% if status == "alle" %}selected{% endif %}>Alle</option>
+            <option value="frei" {% if status == "frei" %}selected{% endif %}>Nur frei</option>
+            <option value="zugewiesen" {% if status == "zugewiesen" %}selected{% endif %}>Nur zugewiesen</option>
+          </select>
+          <button class="btn btn-primary w-full" type="submit">Filtern</button>
+        </form>
+        <a href="{% url 'innenauftraege' %}" class="btn btn-ghost mt-2">✖ Zurücksetzen</a>
+
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 border border-base-200 rounded-box shadow-lg">
+        <div class="h-150 overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Nummer</th>
+                <th>Bezeichnung</th>
+                <th>Status</th>
+                <th>Andockung</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ia in innenauftraege %}
+              <tr>
+                <td class="font-semibold">{{ ia.nummer }}</td>
+                <td>{{ ia.bezeichnung|default:"-" }}</td>
+                <td>
+                  {% if ia.ist_frei %}
+                    <span class="badge badge-info">frei</span>
+                  {% else %}
+                    <span class="badge badge-success">zugewiesen</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if ia.einsatz %}
+                    {{ ia.get_andock_art_display }}<br />
+                    <span class="text-xs">
+                      {{ ia.einsatz.stelle.name }} / {{ ia.einsatz.mitarbeiter.vorname }} {{ ia.einsatz.mitarbeiter.nachname }}
+                    </span>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="flex gap-2">
+                  <a href="{% url 'innenauftrag_update' ia.pk %}" class="btn btn-xs btn-outline">Bearbeiten</a>
+                  {% if not ia.ist_frei %}
+                  <form method="post" action="{% url 'innenauftrag_freigeben' ia.pk %}">
+                    {% csrf_token %}
+                    <button class="btn btn-xs btn-warning" type="submit">Freigeben</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-base-content/60">Keine Innenaufträge gefunden.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
