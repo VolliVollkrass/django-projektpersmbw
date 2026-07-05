@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+db.sqlite3
+media/
+staticfiles/
+node_modules/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+docker-compose*.yml

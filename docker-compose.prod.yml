@@ -1,0 +1,25 @@
+# Vorlage für den Server: liegt dort als ~/docker/diakon/docker-compose.yml
+# Der Code wird als Git-Clone nach ~/docker/diakon/app erwartet,
+# die .env mit Secrets liegt daneben (~/docker/diakon/.env).
+
+services:
+  web:
+    build: ./app
+    container_name: diakon
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./media:/app/media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.diakon.rule=Host(`diakon.undmeererleben.de`)
+      - traefik.http.routers.diakon.entrypoints=websecure
+      - traefik.http.routers.diakon.tls.certresolver=le
+      - traefik.http.services.diakon.loadbalancer.server.port=8000
+    networks:
+      - traefik-proxy
+
+networks:
+  traefik-proxy:
+    external: true
