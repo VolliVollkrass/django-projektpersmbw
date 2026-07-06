@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.timezone import now
@@ -133,6 +133,7 @@ def innenauftraege(request):
 
 
 @login_required
+@permission_required("mbw.add_innenauftrag", raise_exception=True)
 def innenauftrag_create(request):
     if request.method == "POST":
         form = InnenauftragForm(request.POST)
@@ -147,6 +148,7 @@ def innenauftrag_create(request):
 
 
 @login_required
+@permission_required("mbw.change_innenauftrag", raise_exception=True)
 def innenauftrag_update(request, pk):
     innenauftrag = get_object_or_404(Innenauftrag, pk=pk)
 
@@ -167,6 +169,7 @@ def innenauftrag_update(request, pk):
 
 
 @login_required
+@permission_required("mbw.change_innenauftrag", raise_exception=True)
 def innenauftrag_freigeben(request, pk):
     innenauftrag = get_object_or_404(Innenauftrag, pk=pk)
     if request.method == "POST":
@@ -178,6 +181,7 @@ def innenauftrag_freigeben(request, pk):
 
 
 @login_required
+@permission_required("mbw.change_innenauftrag", raise_exception=True)
 def innenauftrag_zuweisen(request, pk):
     einsatz = get_object_or_404(Einsatz.objects.select_related("stelle", "mitarbeiter"), pk=pk)
 
@@ -270,6 +274,7 @@ def quartalsuebersicht(request):
 
 
 @login_required
+@permission_required("mbw.add_quartalsabrechnung", raise_exception=True)
 def quartalsabrechnung_buchen(request, pk):
     einsatz = get_object_or_404(Einsatz, pk=pk, abrechnung=True)
     if request.method != "POST":
@@ -351,6 +356,7 @@ def fakturierungsliste(request):
 
 
 @login_required
+@permission_required("mbw.change_fakturierungsvorgang", raise_exception=True)
 def fakturierung_bearbeiten(request, pk):
     einsatz = get_object_or_404(
         Einsatz.objects.select_related("stelle", "mitarbeiter", "innenauftrag"),

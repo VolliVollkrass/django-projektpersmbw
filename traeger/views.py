@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.contrib import messages
 from .models import Traeger, Stelle, Einrichtung
@@ -31,6 +31,7 @@ def traeger_detail(request, pk):
     return render(request, 'traeger/traeger_detail.html', {'traeger': traeger})
 
 @login_required
+@permission_required("traeger.add_traeger", raise_exception=True)
 def traeger_create(request):
     if request.method == "POST":
         form = TraegerForm(request.POST)
@@ -46,6 +47,7 @@ def traeger_create(request):
     return render(request, "traeger/traeger_form.html", {"form": form, "modus": "create"})
 
 @login_required
+@permission_required("traeger.change_traeger", raise_exception=True)
 def traeger_edit(request, pk):
     traeger = get_object_or_404(Traeger, pk=pk)
 
@@ -61,6 +63,7 @@ def traeger_edit(request, pk):
 
 
 @login_required
+@permission_required("traeger.delete_traeger", raise_exception=True)
 def traeger_delete(request, pk):
     traeger = get_object_or_404(Traeger, pk=pk)
 
@@ -99,6 +102,7 @@ def stellen_detail(request, pk):
     return render(request, 'stellen/stellen_detail.html', {'stellen': stellen})
 
 @login_required
+@permission_required("traeger.add_stelle", raise_exception=True)
 def stellen_create(request):
     if request.method == "POST":
         form = StellenForm(request.POST)
@@ -114,6 +118,7 @@ def stellen_create(request):
     return render(request, "stellen/stellen_form.html", {"form": form, "modus": "create"})
 
 @login_required
+@permission_required("traeger.change_stelle", raise_exception=True)
 def stellen_edit(request, pk):
     traeger = get_object_or_404(Stelle, pk=pk)
 
@@ -128,6 +133,7 @@ def stellen_edit(request, pk):
     return render(request, "stellen/stellen_form.html", {"form": form, "modus": "edit"})
 
 @login_required
+@permission_required("traeger.delete_stelle", raise_exception=True)
 def stellen_delete(request, pk):
     stelle = get_object_or_404(Stelle, pk=pk)
 
@@ -167,6 +173,7 @@ def einrichtung_detail(request, pk):
     return render(request, 'einrichtung/einrichtung_detail.html', {'einrichtung': einrichtung})
 
 @login_required
+@permission_required("traeger.add_einrichtung", raise_exception=True)
 def einrichtung_create(request):
     if request.method == "POST":
         form = EinrichtungForm(request.POST)
@@ -182,6 +189,7 @@ def einrichtung_create(request):
     return render(request, "einrichtung/einrichtung_form.html", {"form": form, "modus": "create"})
 
 @login_required
+@permission_required("traeger.change_einrichtung", raise_exception=True)
 def einrichtung_edit(request, pk):
     einrichtung = get_object_or_404(Einrichtung, pk=pk)
 
@@ -197,6 +205,7 @@ def einrichtung_edit(request, pk):
 
 
 @login_required
+@permission_required("traeger.delete_einrichtung", raise_exception=True)
 def einrichtung_delete(request, pk):
     einrichtung = get_object_or_404(Einrichtung, pk=pk)
 

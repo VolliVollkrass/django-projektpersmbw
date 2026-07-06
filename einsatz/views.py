@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -25,6 +25,7 @@ def einsatz(request):
 
 
 @login_required
+@permission_required("einsatz.change_einsatz", raise_exception=True)
 def einsatz_toggle_abrechnung(request, pk):
     einsatz = get_object_or_404(Einsatz, pk=pk)
     if request.method == "POST":
@@ -42,6 +43,7 @@ def einsatz_detail(request, pk):
 
 
 @login_required
+@permission_required("einsatz.add_einsatz", raise_exception=True)
 def einsatz_create(request):
     if request.method == "POST":
         form = EinsatzForm(request.POST)
@@ -57,6 +59,7 @@ def einsatz_create(request):
 
 
 @login_required
+@permission_required("einsatz.change_einsatz", raise_exception=True)
 def einsatz_update(request, pk):
     einsatz = get_object_or_404(Einsatz, pk=pk)
 
@@ -76,6 +79,7 @@ def einsatz_update(request, pk):
 
 
 @login_required
+@permission_required("einsatz.delete_einsatz", raise_exception=True)
 def einsatz_delete(request, pk):
     einsatz = get_object_or_404(Einsatz, pk=pk)
 

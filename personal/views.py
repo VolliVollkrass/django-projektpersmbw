@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Q
 from django.contrib import messages
 from .forms import MitarbeiterForm
@@ -52,6 +52,7 @@ def person_detail(request, pk):
     return render(request, 'personal/person_detail.html', {'mitarbeiter': mitarbeiter})
 
 @login_required
+@permission_required("personal.add_mitarbeiter", raise_exception=True)
 def mitarbeiter_create(request):
     if request.method == "POST":
         form = MitarbeiterForm(request.POST)
@@ -66,6 +67,7 @@ def mitarbeiter_create(request):
     return render(request, "personal/personal_form.html", {"form": form})
 
 @login_required
+@permission_required("personal.change_mitarbeiter", raise_exception=True)
 def mitarbeiter_update(request, pk):
     mitarbeiter = get_object_or_404(Mitarbeiter, pk=pk)
 
@@ -84,6 +86,7 @@ def mitarbeiter_update(request, pk):
     })
 
 @login_required
+@permission_required("personal.delete_mitarbeiter", raise_exception=True)
 def mitarbeiter_delete(request, pk):
     mitarbeiter = get_object_or_404(Mitarbeiter, pk=pk)
 

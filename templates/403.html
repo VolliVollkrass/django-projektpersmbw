@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Kein Zugriff{% endblock %}
+{% block content %}
+<div class="hero bg-base-200 min-h-screen">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">🔒 Kein Zugriff</h1>
+      <p class="py-6">
+        Für diese Aktion fehlt deinem Konto die Berechtigung.
+        Wende dich an die Administration, wenn du sie benötigst.
+      </p>
+      <a class="btn btn-primary" href="{% url "home" %}">Zur Startseite</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

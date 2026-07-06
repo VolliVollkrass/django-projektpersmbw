@@ -102,6 +102,26 @@ cd ~/docker/diakon/app && git pull
 cd ~/docker/diakon && docker compose up -d --build
 ```
 
+## 6a. Benutzergruppen / Rollen
+
+Einmalig (und nach Rollen-Änderungen erneut) ausführen:
+
+```bash
+docker compose exec web python manage.py setup_rollen
+```
+
+Legt drei Gruppen an:
+
+| Gruppe | darf |
+|---|---|
+| Lesen | alles ansehen, nichts ändern |
+| Sachbearbeitung | ansehen, anlegen, ändern – **nicht** löschen |
+| Administration | alles inkl. löschen |
+
+Benutzer im Django-Admin unter **Benutzer → Gruppen** zuordnen. Neue
+Kollegen-Konten dort anlegen (nicht als Superuser!) und genau einer
+Gruppe zuweisen.
+
 ## 7. Backup (täglich, Cron auf dem Server)
 
 Script `~/docker/diakon/backup.sh`:
