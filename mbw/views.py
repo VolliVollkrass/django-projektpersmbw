@@ -52,8 +52,6 @@ def aktive_einsaetze(request):
             Q(stelle__name__icontains=query)
             | Q(mitarbeiter__vorname__icontains=query)
             | Q(mitarbeiter__nachname__icontains=query)
-            | Q(beginn__icontains=query)
-            | Q(ende__icontains=query)
         )
 
     context = {
@@ -78,8 +76,6 @@ def abrechnungsliste(request):
             Q(stelle__name__icontains=query)
             | Q(mitarbeiter__vorname__icontains=query)
             | Q(mitarbeiter__nachname__icontains=query)
-            | Q(beginn__icontains=query)
-            | Q(ende__icontains=query)
         )
 
     einsatz_ids = [e.pk for e in einsaetze]

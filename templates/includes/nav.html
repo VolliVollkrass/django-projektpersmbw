@@ -3,19 +3,16 @@
     <a class="btn btn-ghost text-xl" href="/">🏡 Startseite</a>
   </div>
   <div class="flex-none">
-    <ul class="menu menu-horizontal px-1">
-      <li><a class="link link-secondary" href="/">Info</a></li>
-    
     {% if user.is_authenticated %}
+    <ul class="menu menu-horizontal px-1">
       <li><a class="link link-secondary" href="{% url "personal" %}">Personal</a></li>
-    </ul>    
-    <a class="btn btn-secondary" href="{% url "myaccount" %}">{{ user.first_name }} 🛀🏽</a>
+      <li><a class="link link-secondary" href="{% url "einsatz" %}">Einsätze</a></li>
+      <li><a class="link link-secondary" href="{% url "traeger" %}">Träger</a></li>
+      <li><a class="link link-secondary" href="{% url "mbw" %}">Mittelbewirtschaftung</a></li>
+    </ul>
+    <a class="btn btn-secondary" href="{% url "myaccount" %}">{{ user.first_name|default:user.username }}</a>
     {% else %}
-    <div class="flex space-x-2">
     <a class="btn btn-secondary" href="{% url "login" %}">Login</a>
-    <a class="btn btn-secondary" href="/">Registrieren</a>
-    </div>
     {% endif %}
-            
   </div>
 </div>

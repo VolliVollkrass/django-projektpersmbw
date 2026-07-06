@@ -6,68 +6,111 @@
 {% if user.is_authenticated %}
 <div class="min-h-screen">
   <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
-    <div class="p-6 flex">
-      <h1 class="text-3xl font-bold flex-auto ">Startseite </h1>
-      <div class="flex-none ">
-          <a class="btn btn-error " href="{% url "admin:index" %}">Admin-menu</a>
 
+    <div class="p-6 flex items-center">
+      <div class="flex-auto">
+        <h1 class="text-3xl font-bold">Guten Tag{% if user.first_name %}, {{ user.first_name }}{% endif %}!</h1>
+        <p class="text-base-content/70 mt-1">Q{{ quartal }}/{{ jahr }} –
+          {% if offene_aufgaben %}es gibt {{ offene_aufgaben }} offene Aufgabe{{ offene_aufgaben|pluralize:"n" }}.
+          {% else %}aktuell ist alles erledigt. 🎉{% endif %}
+        </p>
       </div>
-      
+      {% if user.is_staff %}
+      <a class="btn btn-outline" href="{% url "admin:index" %}">Admin</a>
+      {% endif %}
     </div>
-    <p class="pl-6">Was möchtest du heute erledigen?</p>
-    <div class="grid grid-cols-3 p-4">
-      <div class="card bg-secondary text-secondary-content m-2">
-        <div class="card-body">
-          <h2 class="card-title">Personen</h2>
-          <p>Direkt zu den Diakon*innen</p>
-          <div class="card-actions justify-end">
-            <a href="{% url "personal" %}" class="btn bg-neutral border-none">Personal</a>
-          </div>
+
+    {# ── Aufgaben: Was ist jetzt dran? ─────────────────────────── #}
+    <div class="px-6 pb-2">
+      <h2 class="text-xl font-semibold mb-3">Was ist dran?</h2>
+      <ul class="menu bg-base-200 rounded-box w-full p-2">
+        {% for a in aufgaben %}
+        <li>
+          <a href="{% url a.url_name %}" class="flex items-center justify-between {% if not a.anzahl %}opacity-50{% endif %}">
+            <span>
+              <span class="font-medium">{{ a.titel }}</span>
+              <span class="block text-xs text-base-content/60">{{ a.hinweis }}</span>
+            </span>
+            <span class="badge badge-lg {% if a.anzahl %}badge-error{% else %}badge-success{% endif %}">
+              {{ a.anzahl }}
+            </span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {# ── Kennzahlen ────────────────────────────────────────────── #}
+    <div class="px-6 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="stats shadow bg-base-200">
+        <div class="stat">
+          <div class="stat-title">Aktive Mitarbeitende</div>
+          <div class="stat-value text-primary">{{ aktive_mitarbeiter }}</div>
         </div>
       </div>
-      <div class="card bg-secondary text-secondary-content m-2">
-        <div class="card-body">
-          <h2 class="card-title">Einsätze</h2>
-          <p>Direkt zu den Einsätzen</p>
-          <div class="card-actions justify-end">
-            <a href="{% url "personal" %}" class="btn bg-neutral border-none">Einsatz</a>
-          </div>
+      <div class="stats shadow bg-base-200">
+        <div class="stat">
+          <div class="stat-title">Aktive Einsätze</div>
+          <div class="stat-value text-secondary">{{ aktive_einsaetze }}</div>
         </div>
       </div>
-      <div class="card bg-secondary text-secondary-content m-2">
-        <div class="card-body">
-          <h2 class="card-title">Träger</h2>
-          <p>Direkt zu den Trägern</p>
-          <div class="card-actions justify-end">
-            <a href="{% url "traeger" %}" class="btn bg-neutral border-none">Träger</a>
-          </div>
+      <div class="stats shadow bg-base-200">
+        <div class="stat">
+          <div class="stat-title">Abrechnungsfälle</div>
+          <div class="stat-value text-accent">{{ abrechnungsfaelle_anzahl }}</div>
         </div>
       </div>
-      <div class="card bg-secondary text-secondary-content m-2">
-        <div class="card-body">
-          <h2 class="card-title">Mittelbewirtschaftung</h2>
-          <p>Direkt zur Mittelbewirtschaftung</p>
-          <div class="card-actions justify-end">
-            <a href="{% url "mbw" %}" class="btn bg-neutral border-none">Mittelbewirtschaftung</a>
-          </div>
+      <div class="stats shadow bg-base-200">
+        <div class="stat">
+          <div class="stat-title">Freie Innenaufträge</div>
+          <div class="stat-value text-info">{{ freie_innenauftraege }}</div>
         </div>
       </div>
     </div>
+
+    {# ── Schnellzugriff ────────────────────────────────────────── #}
+    <div class="px-6 pb-6">
+      <h2 class="text-xl font-semibold mb-3">Schnellzugriff</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <a href="{% url "personal" %}" class="card bg-secondary text-secondary-content hover:shadow-lg transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title">Personal</h3>
+            <p>Diakon*innen verwalten</p>
+          </div>
+        </a>
+        <a href="{% url "einsatz" %}" class="card bg-secondary text-secondary-content hover:shadow-lg transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title">Einsätze</h3>
+            <p>Zuordnung Person ↔ Stelle</p>
+          </div>
+        </a>
+        <a href="{% url "traeger" %}" class="card bg-secondary text-secondary-content hover:shadow-lg transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title">Träger</h3>
+            <p>Träger, Einrichtungen, Stellen</p>
+          </div>
+        </a>
+        <a href="{% url "mbw" %}" class="card bg-secondary text-secondary-content hover:shadow-lg transition-shadow">
+          <div class="card-body">
+            <h3 class="card-title">Mittelbewirtschaftung</h3>
+            <p>Abrechnung &amp; Fakturierung</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
   </div>
 </div>
 {% else %}
 <div class="hero bg-base-200 min-h-screen">
-  <div class="hero-content flex-col lg:flex-row">
-    <img
-      src="https://img.daisyui.com/images/stock/photo-1635805737707-575885ab0820.webp"
-      class="max-w-sm rounded-lg shadow-2xl"
-    />
-    <div>
-      <h1 class="text-5xl font-bold">Servus und Hallo</h1>
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">Diakon-Verwaltung</h1>
       <p class="py-6">
-        Melde dich an und schon kann es los gehen.
+        Personal, Einsätze und Mittelbewirtschaftung des Landeskirchenamts.
+        Bitte melde dich mit deinem Benutzerkonto an.
       </p>
-      <a class="btn btn-primary" href="{% url "login" %}">Login</a>
+      <a class="btn btn-primary btn-wide" href="{% url "login" %}">Anmelden</a>
     </div>
   </div>
 </div>

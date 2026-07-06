@@ -18,8 +18,6 @@ def einsatz(request):
             Q(stelle__name__icontains=query)
             | Q(mitarbeiter__vorname__icontains=query)
             | Q(mitarbeiter__nachname__icontains=query)
-            | Q(beginn__icontains=query)
-            | Q(ende__icontains=query)
         )
 
     ctx = {"einsaetze": einsaetze, "einsatz_anzahl": einsatz_anzahl, "query": query}
