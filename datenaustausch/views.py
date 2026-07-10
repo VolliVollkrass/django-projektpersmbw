@@ -4,7 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -44,12 +44,9 @@ def uebersicht(request):
 def vorlage_download(request):
     if not VORLAGE_PFAD.exists():
         raise Http404("Vorlage nicht gefunden.")
-    return FileResponse(
-        open(VORLAGE_PFAD, "rb"),
-        as_attachment=True,
-        filename="Stammdaten-Import-Vorlage.xlsx",
-        content_type=XLSX_MIME,
-    )
+    response = HttpResponse(VORLAGE_PFAD.read_bytes(), content_type=XLSX_MIME)
+    response["Content-Disposition"] = 'attachment; filename="Stammdaten-Import-Vorlage.xlsx"'
+    return response
 
 
 @login_required
