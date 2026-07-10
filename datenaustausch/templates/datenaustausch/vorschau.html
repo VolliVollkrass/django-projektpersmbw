@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Import-Vorschau{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6">
+      <h1 class="text-3xl font-bold">Import-Vorschau</h1>
+      <p class="mt-1 opacity-70">Datei: {{ dateiname }} — es wurde noch <b>nichts gespeichert</b>.</p>
+    </div>
+
+    <div class="px-6 pb-6 space-y-4">
+
+      {% if hat_fehler %}
+      <div role="alert" class="alert alert-error">
+        <span>Die Datei enthält Fehler. Der Import ist erst möglich, wenn alle Fehler behoben sind –
+          es wird grundsätzlich alles oder nichts gespeichert.</span>
+      </div>
+      {% else %}
+      <div role="alert" class="alert alert-success">
+        <span>Keine Fehler gefunden. Prüfe die Zahlen und bestätige den Import.</span>
+      </div>
+      {% endif %}
+
+      {% for e in ergebnisse %}
+      <div class="card border {% if e.hat_fehler %}border-error{% else %}border-base-200{% endif %} bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title">
+            Blatt „{{ e.sheet_name }}“
+            <span class="badge badge-ghost">{{ e.zeilen }} Zeile{{ e.zeilen|pluralize:"n" }}</span>
+          </h2>
+          <div class="flex flex-wrap gap-2">
+            <span class="badge badge-success badge-outline">Neu: {{ e.neu }}</span>
+            <span class="badge badge-info badge-outline">Aktualisiert: {{ e.aktualisiert }}</span>
+            <span class="badge badge-ghost">Unverändert: {{ e.unveraendert }}</span>
+            {% if e.hat_fehler %}
+            <span class="badge badge-error">Fehler: {{ e.fehler|length }}</span>
+            {% endif %}
+          </div>
+
+          {% if e.hat_fehler %}
+          <div class="overflow-x-auto mt-2">
+            <table class="table table-sm">
+              <thead>
+                <tr><th class="w-24">Excel-Zeile</th><th>Fehler</th></tr>
+              </thead>
+              <tbody>
+                {% for zeile, meldung in e.fehler %}
+                <tr><td>{{ zeile }}</td><td>{{ meldung }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="flex gap-3 justify-end">
+        <form method="post" action="{% url "datenaustausch_import_abbrechen" %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost">Abbrechen</button>
+        </form>
+        <form method="post" action="{% url "datenaustausch_import_bestaetigen" %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary" {% if hat_fehler %}disabled{% endif %}>
+            ✔ Import jetzt ausführen
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -15,7 +15,12 @@ class Traeger(models.Model):
     name = models.CharField("Name", max_length=200, db_index=True)
     art = models.CharField("Art", max_length=2, choices=TraegerArt.choices, db_index=True)
 
-    traeger_id = models.CharField("Träger-Id", max_length=50, blank=True, db_index=True)
+    traeger_id = models.CharField(
+        "Träger-Id",
+        max_length=50,
+        db_index=True,
+        help_text="Fachlicher Schlüssel für Import/Export – muss eindeutig sein",
+    )
 
     haupt_ansprechpartner = models.ForeignKey(
         Ansprechpartner,
@@ -42,6 +47,14 @@ class Traeger(models.Model):
         verbose_name = "Träger"
         verbose_name_plural = "Träger"
         ordering = ["name"]
+        constraints = [
+            # Bestehende Datensätze ohne Id bleiben gültig, gesetzte Ids müssen eindeutig sein
+            models.UniqueConstraint(
+                fields=["traeger_id"],
+                condition=~models.Q(traeger_id=""),
+                name="traeger_traeger_id_eindeutig",
+            ),
+        ]
 
 class Einrichtung(models.Model):
 
@@ -61,7 +74,12 @@ class Einrichtung(models.Model):
 
     name = models.CharField(max_length=200)
     einrichtung_art = models.CharField("Einrichtungsart", max_length=100, blank=True, choices=EinrichtungsArt.choices)
-    einrichtungs_id = models.CharField("Einrichtungs-Id", max_length=50, blank=True)
+    einrichtungs_id = models.CharField(
+        "Einrichtungs-Id",
+        max_length=50,
+        db_index=True,
+        help_text="Fachlicher Schlüssel für Import/Export – Sammel-Ids sind erlaubt, Id + Name müssen zusammen eindeutig sein",
+    )
 
     strasse = models.CharField("Straße", max_length=100, blank=True)
     plz = models.CharField("PLZ", max_length=5, blank=True)
@@ -97,6 +115,13 @@ class Einrichtung(models.Model):
         verbose_name = "Einrichtung"
         verbose_name_plural = "Einrichtungen"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["einrichtungs_id", "name"],
+                condition=~models.Q(einrichtungs_id=""),
+                name="einrichtung_id_name_eindeutig",
+            ),
+        ]
 
 
 class Stelle(models.Model):
@@ -104,7 +129,12 @@ class Stelle(models.Model):
     einrichtung = models.ForeignKey(Einrichtung, on_delete=models.CASCADE, related_name="stellen")
 
     name = models.CharField(max_length=200)
-    stellen_id = models.CharField("Stellen-Id", max_length=50, blank=True)
+    stellen_id = models.CharField(
+        "Stellen-Id",
+        max_length=50,
+        db_index=True,
+        help_text="Fachlicher Schlüssel für Import/Export – Sammel-Ids sind erlaubt, Id + Name müssen zusammen eindeutig sein",
+    )
 
     strasse = models.CharField("Straße", max_length=100, blank=True)
     plz = models.CharField("PLZ", max_length=5, blank=True)
@@ -132,3 +162,10 @@ class Stelle(models.Model):
         verbose_name = "Stellen"
         verbose_name_plural = "Stellen"
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["stellen_id", "name"],
+                condition=~models.Q(stellen_id=""),
+                name="stelle_id_name_eindeutig",
+            ),
+        ]

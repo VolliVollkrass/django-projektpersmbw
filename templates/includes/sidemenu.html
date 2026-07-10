@@ -34,6 +34,18 @@
           </li>
         </ul>
       </fieldset>
+      {% if perms.personal.change_mitarbeiter %}
+      <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
+        <legend class="fieldset-legend">Daten</legend>
+        <ul class="menu bg-base-200 rounded-box w-56">
+          <li>
+            <ul>
+              <li><a href="{% url "datenaustausch" %}">Import &amp; Export</a></li>
+            </ul>
+          </li>
+        </ul>
+      </fieldset>
+      {% endif %}
       <fieldset class="fieldset bg-base-200 border-base-300 rounded-box w-xs border p-4">
         <legend class="fieldset-legend">Mittelbewirtschaftung</legend>
         <ul class="menu bg-base-200 rounded-box w-56">

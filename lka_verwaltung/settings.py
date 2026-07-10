@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'einsatz',
     'beurteilung',
     'mbw',
+    'datenaustausch',
 ]
 
 MIDDLEWARE = [

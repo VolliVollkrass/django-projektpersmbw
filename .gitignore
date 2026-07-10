@@ -20,3 +20,6 @@ node_modules/
 
 # OS
 .DS_Store
+
+# Interne Doku (gehört nicht ins Repo)
+Notfall-Wiederherstellung-Datenbank-diakon.docx

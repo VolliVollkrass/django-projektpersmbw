@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Import & Export{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Import &amp; Export</h1>
+      <div class="flex-none">
+        <a class="btn btn-primary" href="{% url "home" %}">Startseite</a>
+      </div>
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 space-y-6">
+
+        <div class="card border border-base-200 bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">1&nbsp;·&nbsp;Vorlage herunterladen</h2>
+            <p>Leere Excel-Vorlage mit allen Blättern (Ansprechpartner, Träger, Einrichtungen,
+              Stellen, Mitarbeiter, Einsätze), Anleitung und Beispielzeile. Die Verknüpfungen
+              laufen über die fachlichen Schlüssel: <b>Träger-Id</b>, <b>Einrichtungs-Id</b>,
+              <b>Stellen-Id</b>, <b>Personalnummer</b> und die E-Mail des Ansprechpartners.</p>
+            <div class="card-actions justify-end">
+              <a class="btn btn-outline btn-primary" href="{% url "datenaustausch_vorlage" %}">⬇ Vorlage (.xlsx)</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border border-base-200 bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">2&nbsp;·&nbsp;Daten importieren</h2>
+            <p>Ausgefüllte Mappe hochladen. Du bekommst zuerst eine <b>Vorschau</b>
+              (was wird neu angelegt, was aktualisiert, wo sind Fehler) –
+              gespeichert wird erst nach deiner Bestätigung, und nur wenn die
+              gesamte Datei fehlerfrei ist. Vorhandene Datensätze werden über die
+              fachlichen Schlüssel erkannt und aktualisiert, nicht doppelt angelegt.
+              Es müssen nicht alle Blätter gefüllt sein.</p>
+            <form method="post" action="{% url "datenaustausch_import_vorschau" %}" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3">
+              {% csrf_token %}
+              <input type="file" name="datei" accept=".xlsx" required class="file-input file-input-bordered" />
+              <button type="submit" class="btn btn-primary">Prüfen &amp; Vorschau</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card border border-base-200 bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">3&nbsp;·&nbsp;Alle Daten exportieren</h2>
+            <p>Erzeugt eine Excel-Mappe im Vorlagenformat mit dem kompletten Datenbestand
+              (ein Blatt pro Bereich). Die Datei eignet sich für Auswertungen und kann
+              nach Änderungen direkt wieder importiert werden.</p>
+            <div class="card-actions justify-end">
+              <a class="btn btn-primary" href="{% url "datenaustausch_export" %}">⬇ Gesamtexport (.xlsx)</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import Mitarbeiter
+from .resources import MitarbeiterResource
 from traeger.models import Stelle
-from import_export import resources, fields
 from import_export.admin import ImportExportModelAdmin
 
 #from einsatz.models import Einsatz
@@ -10,29 +10,6 @@ from import_export.admin import ImportExportModelAdmin
 #    model = Einsatz
 #    extra = 0
 #    show_change_link = True
-
-
-class MitarbeiterResource(resources.ModelResource):
-    def before_import_row(self, row, **kwargs):
-        if not row.get("personalnummer"):
-            raise ValueError("Personalnummer fehlt")
-
-        if row.get("kinder", 0) < 0:
-            raise ValueError("Kinder darf nicht negativ sein")
-        
-    def before_save_instance(self, instance, row, **kwargs):
-        user = kwargs.get("user")
-        if not instance.angelegt_von:
-            instance.angelegt_von = user
-
-
-    class Meta:
-        model = Mitarbeiter
-        import_id_fields = ('personalnummer',)  # <- extrem wichtig (Update statt Duplikate)
-        skip_unchanged = True
-        report_skipped = True
-        use_bulk = True
-        batch_size = 500
 
 
 class StelleInline(admin.TabularInline):

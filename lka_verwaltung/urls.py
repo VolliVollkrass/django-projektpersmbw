@@ -15,4 +15,5 @@ urlpatterns = [
     path("einsatz/", include("einsatz.urls")),
     path("beurteilung/", include("beurteilung.urls")),
     path("mbw/", include("mbw.urls")),
+    path("daten/", include("datenaustausch.urls")),
 ]
