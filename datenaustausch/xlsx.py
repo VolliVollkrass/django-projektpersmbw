@@ -83,10 +83,19 @@ def mappe_lesen(datei):
     return ergebnis
 
 
-KOPF_FUELLUNG = PatternFill("solid", fgColor="1F4E78")
+# ELKB-CI-Farben (wie das App-Theme in assets/css/input.css)
+ELKB_VIOLETT = "5B2281"       # primary
+ELKB_BLAUGRAU = "839ABA"      # secondary
+ELKB_VIOLETT_MITTEL = "C8B8DB"  # base-200
+ELKB_VIOLETT_HELL = "ECE7F3"    # base-100
+
+MARKER_FUELLUNG = PatternFill("solid", fgColor=ELKB_BLAUGRAU)
+MARKER_SCHRIFT = Font(bold=True, color="FFFFFF")
+KOPF_FUELLUNG = PatternFill("solid", fgColor=ELKB_VIOLETT)
 KOPF_SCHRIFT = Font(bold=True, color="FFFFFF")
-MARKER_SCHRIFT = Font(italic=True, color="808080")
-SCHLUESSEL_FUELLUNG = PatternFill("solid", fgColor="FFF2CC")
+SCHLUESSEL_FUELLUNG = PatternFill("solid", fgColor=ELKB_VIOLETT_MITTEL)
+SCHLUESSEL_SCHRIFT = Font(bold=True, color=ELKB_VIOLETT)
+STREIFEN_FUELLUNG = PatternFill("solid", fgColor=ELKB_VIOLETT_HELL)
 
 
 def mappe_schreiben(datensaetze):
@@ -115,13 +124,21 @@ def mappe_schreiben(datensaetze):
         for spalte_nr, spalte in enumerate(kopf, start=1):
             marker_zelle = ws.cell(row=1, column=spalte_nr)
             marker_zelle.font = MARKER_SCHRIFT
+            marker_zelle.fill = MARKER_FUELLUNG
             kopf_zelle = ws.cell(row=2, column=spalte_nr)
-            kopf_zelle.font = KOPF_SCHRIFT
-            kopf_zelle.fill = KOPF_FUELLUNG
             if spalte in config.pflicht_spalten:
-                marker_zelle.fill = SCHLUESSEL_FUELLUNG
+                kopf_zelle.font = SCHLUESSEL_SCHRIFT
+                kopf_zelle.fill = SCHLUESSEL_FUELLUNG
+            else:
+                kopf_zelle.font = KOPF_SCHRIFT
+                kopf_zelle.fill = KOPF_FUELLUNG
             breite = max([len(str(spalte))] + [len(str(z)) for z in daten[spalte] if z is not None][:200] or [10])
             ws.column_dimensions[get_column_letter(spalte_nr)].width = min(max(breite + 2, 12), 45)
+
+        # Dezente Zeilenstreifen in ELKB-Hellviolett
+        for zeilen_nr in range(4, ws.max_row + 1, 2):
+            for spalte_nr in range(1, len(kopf) + 1):
+                ws.cell(row=zeilen_nr, column=spalte_nr).fill = STREIFEN_FUELLUNG
 
         ws.freeze_panes = "A3"
 
