@@ -10,12 +10,32 @@ Kostenstelle | Auftrag | Name | ID | Erstattungspflichtiger Rechtsträger | Debi
 - Bestehende Einsatz-Zuordnungen im CRM werden nicht angetastet.
 """
 
+import re
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 import openpyxl
 
 from mbw.models import Debitor, Innenauftrag
+
+DEBITOR_NUMMER_MUSTER = re.compile(r"\d{7,20}")
+
+
+def _debitor_nummer(wert):
+    """SAP-Debitorennummer aus dem Zellinhalt ziehen.
+
+    Die Spalte enthält teils Vermerke („offen“, „keinen“, „DB LA“) und teils
+    alte und neue Nummer untereinander – bevorzugt wird die S4/HANA-Nummer
+    (beginnt mit 19), sonst die letzte gefundene Nummer.
+    """
+    nummern = DEBITOR_NUMMER_MUSTER.findall(wert)
+    if not nummern:
+        return ""
+    for nummer in reversed(nummern):
+        if nummer.startswith("19"):
+            return nummer
+    return nummern[-1]
 
 SPALTEN = {
     "kostenstelle": "kostenstelle",
@@ -102,21 +122,26 @@ class Command(BaseCommand):
 
             name = wert(zeile, "name")
             rechtstraeger = wert(zeile, "rechtstraeger")
-            debitor_nr = wert(zeile, "debitor")
+            debitor_nr_roh = wert(zeile, "debitor")
+            debitor_nr = _debitor_nummer(debitor_nr_roh)
             bemerkung = wert(zeile, "bemerkung")
 
             debitor = None
             if debitor_nr:
                 debitor = debitoren_cache.get(debitor_nr)
                 if debitor is None:
+                    vorlage = {"name": (rechtstraeger or debitor_nr)[:200]}
+                    if debitor_nr_roh != debitor_nr:
+                        vorlage["bemerkung"] = f"Debitor-Spalte der Arbeitsliste: {debitor_nr_roh}"
                     debitor, _ = Debitor.objects.update_or_create(
-                        sap_nummer=debitor_nr,
-                        defaults={"name": rechtstraeger or debitor_nr},
+                        sap_nummer=debitor_nr, defaults=vorlage
                     )
                     debitoren_cache[debitor_nr] = debitor
                     statistik["debitoren"] += 1
-            elif rechtstraeger:
-                statistik["ohne_debitor"].append(nummer)
+            elif rechtstraeger or debitor_nr_roh:
+                statistik["ohne_debitor"].append(
+                    f"{nummer}{f' („{debitor_nr_roh}“)' if debitor_nr_roh else ''}"
+                )
 
             beendet = "beendet" in name.lower()
             felder = {"kostenstelle": wert(zeile, "kostenstelle")}

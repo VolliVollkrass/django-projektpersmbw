@@ -459,3 +459,19 @@ class SpitzabrechnungTest(TestCase):
         self.assertEqual(antwort.status_code, 200)
         self.assertContains(antwort, "X999999-0001")
         self.assertContains(antwort, "unbekannt")
+
+
+class DebitorNummerTest(TestCase):
+    def test_extraktion_aus_zellwerten(self):
+        from mbw.management.commands.import_innenauftragsliste import _debitor_nummer
+
+        self.assertEqual(_debitor_nummer("1900032335"), "1900032335")
+        # zwei Nummern: S4/HANA-Nummer (19…) gewinnt, egal in welcher Zeile
+        self.assertEqual(_debitor_nummer("1600049958\n1900049958"), "1900049958")
+        # zwei alte Nummern: die letzte gewinnt
+        self.assertEqual(_debitor_nummer("1600036127\n1600028323"), "1600028323")
+        # Nummer mit Vermerk
+        self.assertEqual(_debitor_nummer("1600037504 - alt"), "1600037504")
+        # reine Vermerke ergeben keine Nummer
+        for vermerk in ("offen", "keinen", "DB LA", "DB Su-Ro", ""):
+            self.assertEqual(_debitor_nummer(vermerk), "")
