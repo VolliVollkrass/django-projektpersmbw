@@ -92,7 +92,8 @@
                     <span class="badge badge-ghost">noch offen</span>
                   {% endif %}
                 </td>
-                <td>
+                <td class="flex gap-1">
+                  <a class="btn btn-xs btn-primary" href="{% url 'jahresakte' row.einsatz.pk jahr %}">Jahresakte</a>
                   <a class="btn btn-xs btn-outline" href="{% url 'fakturierung_bearbeiten' row.einsatz.pk %}?jahr={{ jahr }}">Bearbeiten</a>
                 </td>
               </tr>

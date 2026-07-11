@@ -38,6 +38,8 @@
               <tr>
                 <th>Nummer</th>
                 <th>Bezeichnung</th>
+                <th>Kostenstelle</th>
+                <th>Debitor</th>
                 <th>Status</th>
                 <th>Andockung</th>
                 <th>Aktion</th>
@@ -46,8 +48,13 @@
             <tbody>
               {% for ia in innenauftraege %}
               <tr>
-                <td class="font-semibold">{{ ia.nummer }}</td>
+                <td class="font-semibold">
+                  {{ ia.nummer }}
+                  {% if ia.kategorie %}<div class="text-xs text-base-content/60">{{ ia.kategorie_label }}</div>{% endif %}
+                </td>
                 <td>{{ ia.bezeichnung|default:"-" }}</td>
+                <td class="font-mono text-sm">{{ ia.kostenstelle|default:"-" }}</td>
+                <td class="text-sm">{{ ia.debitor|default:"-" }}</td>
                 <td>
                   {% if ia.ist_frei %}
                     <span class="badge badge-info">frei</span>
@@ -77,7 +84,7 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="5" class="text-center text-base-content/60">Keine Innenaufträge gefunden.</td>
+                <td colspan="7" class="text-center text-base-content/60">Keine Innenaufträge gefunden.</td>
               </tr>
               {% endfor %}
             </tbody>

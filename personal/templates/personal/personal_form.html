@@ -84,6 +84,27 @@
             </div>
         </div>
 
+        <!-- 🔹 Abrechnung -->
+        <div class="bg-base-100 border border-base-200 p-6 rounded-box shadow-md">
+            <h2 class="text-lg font-semibold mb-4">Abrechnung (OFZ & Beihilfe)</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                {% include "personal/partials/form_field.html" with field=form.ortsklasse %}
+                {% include "personal/partials/form_field.html" with field=form.beihilfe_art %}
+                <div class="flex items-center gap-3 mt-6">
+                    <label for="{{ form.ehegatte_beihilfe.id_for_label }}" class="text-sm font-medium">
+                        {{ form.ehegatte_beihilfe.label }}
+                    </label>
+                    <div>{{ form.ehegatte_beihilfe }}</div>
+                </div>
+                {% include "personal/partials/form_field.html" with field=form.beihilfe_monat %}
+                {% include "personal/partials/form_field.html" with field=form.beihilfe_kinder_monat %}
+                {% include "personal/partials/form_field.html" with field=form.kv_zuschuss_monat %}
+
+            </div>
+        </div>
+
         <!-- 🔹 Verwaltung -->
         <div class="bg-base-100 border border-base-200 p-6 rounded-box shadow-md">
             <h2 class="text-lg font-semibold mb-4">Verwaltung</h2>

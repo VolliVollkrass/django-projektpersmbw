@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Debitoren{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Debitoren</h1>
+      <div class="flex-none space-x-2">
+        <a class="btn btn-neutral" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
+        {% if perms.mbw.add_debitor %}
+        <a class="btn btn-primary" href="{% url "debitor_create" %}">Neu</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <form method="get" action="{% url 'debitorenliste' %}">
+          <label class="input input-bordered flex items-center gap-2">
+            <input type="search" name="q" value="{{ query }}" placeholder="Name, SAP-Nr, Ort" class="grow" />
+          </label>
+        </form>
+        <a href="{% url 'debitorenliste' %}" class="btn btn-ghost mt-2">✖ Zurücksetzen</a>
+
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 border border-base-200 rounded-box shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>SAP-Nr</th>
+                <th>Name</th>
+                <th>Anschrift</th>
+                <th>Anschriftperson</th>
+                <th>Träger</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for debitor in debitoren %}
+              <tr>
+                <td class="font-mono">{{ debitor.sap_nummer|default:"–" }}</td>
+                <td>
+                  {{ debitor.name }}
+                  {% if debitor.name2 %}<div class="text-xs text-base-content/60">{{ debitor.name2 }}</div>{% endif %}
+                </td>
+                <td class="text-sm">{{ debitor.strasse }}{% if debitor.strasse %}, {% endif %}{{ debitor.plz }} {{ debitor.ort }}</td>
+                <td class="text-sm">{{ debitor.anschriftperson|default:"–" }}</td>
+                <td class="text-sm">{{ debitor.traeger|default:"–" }}</td>
+                <td>
+                  {% if debitor.aktiv %}
+                    <span class="badge badge-success badge-outline">aktiv</span>
+                  {% else %}
+                    <span class="badge badge-ghost">inaktiv</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if perms.mbw.change_debitor %}
+                  <a class="btn btn-xs btn-outline" href="{% url 'debitor_update' debitor.pk %}">Bearbeiten</a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center text-base-content/60">Keine Debitoren gefunden.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

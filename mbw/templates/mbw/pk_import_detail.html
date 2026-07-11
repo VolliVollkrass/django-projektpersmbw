@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Import {{ import_lauf.jahr }}{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex items-center">
+      <div class="flex-auto">
+        <h1 class="text-3xl font-bold">Personalkosten {{ import_lauf.jahr }}</h1>
+        <p class="text-sm text-base-content/70 mt-1">
+          {{ import_lauf.dateiname }} · hochgeladen {{ import_lauf.hochgeladen_am|date:"d.m.Y H:i" }}
+          {% if import_lauf.bemerkung %} · {{ import_lauf.bemerkung }}{% endif %}
+        </p>
+      </div>
+      <a class="btn btn-primary" href="{% url "pk_import_liste" %}">Alle Importe</a>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 px-6">
+      <div class="stats shadow bg-base-200"><div class="stat">
+        <div class="stat-title">Zeilen</div><div class="stat-value text-primary text-2xl">{{ zeilen_anzahl }}</div>
+      </div></div>
+      <div class="stats shadow bg-base-200"><div class="stat">
+        <div class="stat-title">Storno-Paare</div><div class="stat-value text-secondary text-2xl">{{ storno_anzahl }}</div>
+      </div></div>
+      <div class="stats shadow bg-base-200"><div class="stat">
+        <div class="stat-title">Fälle</div><div class="stat-value text-accent text-2xl">{{ faelle|length }}</div>
+      </div></div>
+      <div class="stats shadow bg-base-200"><div class="stat">
+        <div class="stat-title">Ohne IA-Match</div>
+        <div class="stat-value text-2xl {% if ohne_innenauftrag %}text-error{% else %}text-success{% endif %}">{{ ohne_innenauftrag|length }}</div>
+      </div></div>
+    </div>
+
+    {% if ohne_innenauftrag %}
+    <div class="alert alert-error m-6">
+      <span>
+        <strong>Kontrolle:</strong> {{ ohne_innenauftrag|length }} Fall/Fälle mit unbekanntem Innenauftrag –
+        {% for fall in ohne_innenauftrag %}{{ fall.auftrag_nummer }} ({{ fall.nachname }}){% if not forloop.last %}, {% endif %}{% endfor %}.
+        Innenauftrag im CRM anlegen oder Nummer prüfen.
+      </span>
+    </div>
+    {% endif %}
+    {% if ohne_einsatz %}
+    <div class="alert alert-warning mx-6 mb-2">
+      <span>
+        {{ ohne_einsatz|length }} Fall/Fälle, deren Innenauftrag keinem Einsatz zugeordnet ist
+        ({% for fall in ohne_einsatz %}{{ fall.auftrag_nummer }}{% if not forloop.last %}, {% endif %}{% endfor %})
+        – Spitzabrechnung erst nach Zuordnung in der <a class="link" href="{% url 'abrechnungsliste' %}">Abrechnungsliste</a> möglich.
+      </span>
+    </div>
+    {% endif %}
+
+    {% if debitoren %}
+    <div class="px-6 pb-2 flex flex-wrap gap-2 items-center">
+      <span class="text-sm font-medium">Sammelmappen (mehrere Fälle je Debitor):</span>
+      {% for eintrag in debitoren %}
+        <a class="btn btn-sm btn-outline btn-primary" href="{% url 'pk_debitor_mappe' import_lauf.pk eintrag.debitor.pk %}">
+          📥 {{ eintrag.debitor.name|truncatechars:35 }} ({{ eintrag.anzahl }})
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="p-6">
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Person</th>
+              <th>Innenauftrag</th>
+              <th>Debitor</th>
+              <th class="text-right">Bezüge (603100)</th>
+              <th class="text-right">Umlage (609800)</th>
+              <th class="text-right">Gesamt lt. SAP</th>
+              <th>Zeilen</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fall in faelle %}
+            <tr>
+              <td>
+                {{ fall.nachname }}, {{ fall.vorname }}
+                <div class="text-xs text-base-content/60">#{{ fall.personalnummer }}{% if not fall.mitarbeiter %} · <span class="text-warning">nicht im CRM</span>{% endif %}</div>
+              </td>
+              <td class="font-mono text-sm">
+                {{ fall.auftrag_nummer }}
+                {% if not fall.innenauftrag %}<span class="badge badge-error badge-sm">unbekannt</span>{% endif %}
+              </td>
+              <td class="text-sm">{{ fall.debitor|default:"–" }}</td>
+              <td class="text-right font-mono">{{ fall.bezuege }}</td>
+              <td class="text-right font-mono">{{ fall.umlage }}</td>
+              <td class="text-right font-mono">{{ fall.gesamt }}</td>
+              <td>{{ fall.zeilen_anzahl }}</td>
+              <td class="flex gap-1">
+                <a class="btn btn-xs btn-primary" href="{% url 'pk_fall_excel' import_lauf.pk fall.personalnummer fall.auftrag_nummer %}">📥 Fall-Excel</a>
+                {% if fall.einsatz %}
+                <a class="btn btn-xs btn-outline" href="{% url 'jahresakte' fall.einsatz.pk import_lauf.jahr %}">Jahresakte</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

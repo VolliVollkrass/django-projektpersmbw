@@ -1,0 +1,17 @@
+{% autoescape off %}{% if debitor %}{{ debitor.name }}
+{% if debitor.name2 %}{{ debitor.name2 }}
+{% endif %}{% if debitor.anschriftperson %}{{ debitor.anschriftperson }}
+{% endif %}{% if debitor.strasse %}{{ debitor.strasse }}
+{% endif %}{% if debitor.plz or debitor.ort %}{{ debitor.plz }} {{ debitor.ort }}
+{% endif %}{% if debitor.sap_nummer %}Debitor: {{ debitor.sap_nummer }}
+{% endif %}
+{% endif %}Abschlagsrechnung {{ quartal }}. Quartal {{ jahr }} – Erstattung von Personalkosten
+
+Personalkostenerstattung für {{ titel }} {{ mitarbeiter.vorname }} {{ mitarbeiter.nachname }}
+Einsatz: {{ stelle.name }}{% if einrichtung %} ({{ einrichtung.name }}){% endif %}
+Beschäftigungsumfang: {{ einsatz.umfang_prozent|floatformat:"-2" }} %
+Abrechnungszeitraum: 01.01.{{ jahr }} – 31.12.{{ jahr }}
+{% if innenauftrag %}Innenauftrag: {{ innenauftrag.nummer }}{% if innenauftrag.kostenstelle %} · Kostenstelle: {{ innenauftrag.kostenstelle }}{% endif %}
+{% endif %}
+Abschlagszahlung ({{ quartal }}. von 4 Teilbeträgen) gemäß Hochrechnung {{ jahr }}: {{ abschlag|floatformat:2 }} EUR
+{% if hochrechnung %}(Jahres-Hochrechnung: {{ hochrechnung|floatformat:2 }} EUR){% endif %}{% endautoescape %}

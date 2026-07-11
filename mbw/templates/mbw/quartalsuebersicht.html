@@ -47,7 +47,11 @@
             <tbody>
               {% for row in zeilen %}
               <tr>
-                <td>{{ row.einsatz.mitarbeiter.vorname }} {{ row.einsatz.mitarbeiter.nachname }}</td>
+                <td>
+                  <a class="link link-hover link-primary" href="{% url 'jahresakte' row.einsatz.pk jahr %}">
+                    {{ row.einsatz.mitarbeiter.vorname }} {{ row.einsatz.mitarbeiter.nachname }}
+                  </a>
+                </td>
                 <td>{{ row.einsatz.stelle.name }}</td>
                 <td>
                   {% if row.einsatz.innenauftrag %}
@@ -62,6 +66,7 @@
                   {% if eintrag %}
                     <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
                     <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                    {% if eintrag.betrag %}<div class="text-xs font-mono">{{ eintrag.betrag }} €</div>{% endif %}
                   {% else %}
                     <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
                       {% csrf_token %}
@@ -78,6 +83,7 @@
                   {% if eintrag %}
                     <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
                     <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                    {% if eintrag.betrag %}<div class="text-xs font-mono">{{ eintrag.betrag }} €</div>{% endif %}
                   {% else %}
                     <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
                       {% csrf_token %}
@@ -94,6 +100,7 @@
                   {% if eintrag %}
                     <div class="badge badge-success">{{ eintrag.get_art_display }}</div>
                     <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                    {% if eintrag.betrag %}<div class="text-xs font-mono">{{ eintrag.betrag }} €</div>{% endif %}
                   {% else %}
                     <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
                       {% csrf_token %}
@@ -110,6 +117,7 @@
                   {% if eintrag %}
                     <div class="badge badge-warning">{{ eintrag.get_art_display }}</div>
                     <div class="text-xs mt-1">{{ eintrag.verbucht_am|date:"d.m.Y" }}</div>
+                    {% if eintrag.betrag %}<div class="text-xs font-mono">{{ eintrag.betrag }} €</div>{% endif %}
                   {% else %}
                     <form method="post" action="{% url 'quartalsabrechnung_buchen' row.einsatz.pk %}">
                       {% csrf_token %}

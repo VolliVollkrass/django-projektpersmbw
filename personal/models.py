@@ -37,6 +37,21 @@ class Mitarbeiter(models.Model):
         RELPAD = "relpad", "Religionspädagoge"
         SOZPAD = "sozpad", "Sozialpädagoge"
         KIMU = "kimu", "Kirchenmusiker"
+
+    class Ortsklasse(models.TextChoices):
+        I = "I", "I"
+        II = "II", "II"
+        III = "III", "III"
+        IV = "IV", "IV"
+        V = "V", "V"
+        VI = "VI", "VI"
+        VII = "VII", "VII"
+
+    class BeihilfeArt(models.TextChoices):
+        PRIVAT_ALTER = "privat_830", "Privat versichert – Pauschale altersabhängig (Tarif 830)"
+        PRIVAT_PAUSCHAL = "privat_814", "Privat versichert – Pauschalbeitrag (Tarif 814)"
+        GESETZLICH = "gesetzlich", "Freiwillig gesetzlich – KV-Zuschuss + Beihilfeanspruch"
+        KEINE = "keine", "Keine"
     
     # 🔹 Grunddaten
     personalnummer = models.CharField("Personalnummer", max_length=10,primary_key=True, db_index=True)
@@ -59,6 +74,50 @@ class Mitarbeiter(models.Model):
     dienststand = models.CharField('Dienststand',max_length=100, choices=Dienststand.choices, default=Dienststand.DIAKON)
     status_besoldung = models.CharField("Besoldungsgruppe", max_length=10, choices=Besoldung.choices, default=Besoldung.A10)  # A10, E9 etc.
     status_stufe = models.PositiveSmallIntegerField("Besoldungsstufe", default=4)
+
+    # 🔹 Abrechnung (Orts- und Familienzuschlag, Beihilfe – für PK-Erstattung)
+    ortsklasse = models.CharField(
+        "Ortsklasse",
+        max_length=3,
+        choices=Ortsklasse.choices,
+        blank=True,
+        help_text="Mietenstufe des Hauptwohnsitzes nach Wohngeldverordnung (BayBesG Art. 36)",
+    )
+    beihilfe_art = models.CharField(
+        "Beihilfe-Art",
+        max_length=20,
+        choices=BeihilfeArt.choices,
+        default=BeihilfeArt.KEINE,
+    )
+    ehegatte_beihilfe = models.BooleanField(
+        "Ehegatte beihilfeversichert",
+        default=False,
+        help_text="Ehegatte ist in der Beihilfeablöseversicherung mitversichert",
+    )
+    beihilfe_monat = models.DecimalField(
+        "Beihilfeanspruch mtl.",
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Nur freiwillig gesetzlich Versicherte: monatlicher Beihilfeanspruch laut Beihilfestelle",
+    )
+    beihilfe_kinder_monat = models.DecimalField(
+        "Beihilfeanspruch Kinder mtl.",
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Nur freiwillig gesetzlich Versicherte: monatlicher Beihilfeanspruch für Kinder laut Beihilfestelle",
+    )
+    kv_zuschuss_monat = models.DecimalField(
+        "KV-Zuschuss mtl.",
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Nur freiwillig gesetzlich Versicherte: monatlicher Krankenversicherungszuschuss",
+    )
 
     # 🔹 Familie (für Zuschläge) sind in einem extra Model
     familienstand = models.CharField(

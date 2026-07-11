@@ -88,6 +88,12 @@
                         <p><strong>Anstellungsstatus:</strong> {{ mitarbeiter.get_anstellungs_status_display }}</p>
                         <p><strong>Besoldung:</strong> {{ mitarbeiter.status_besoldung }}</p>
                         <p><strong>Besoldungsstufe:</strong> {{ mitarbeiter.status_stufe }}</p>
+                        <p><strong>Ortsklasse (OFZ):</strong> {{ mitarbeiter.ortsklasse|default:"–" }}</p>
+                        <p><strong>Beihilfe:</strong> {{ mitarbeiter.get_beihilfe_art_display }}{% if mitarbeiter.ehegatte_beihilfe %} (inkl. Ehegatte){% endif %}</p>
+                        {% if mitarbeiter.beihilfe_art == "gesetzlich" %}
+                        <p><strong>Beihilfeanspruch mtl.:</strong> {{ mitarbeiter.beihilfe_monat|default:"–" }} € | Kinder: {{ mitarbeiter.beihilfe_kinder_monat|default:"–" }} €</p>
+                        <p><strong>KV-Zuschuss mtl.:</strong> {{ mitarbeiter.kv_zuschuss_monat|default:"–" }} €</p>
+                        {% endif %}
                         <p><strong>Beurteilungsergebnis:</strong> {{ mitarbeiter.eintrittsdatum }}</p>
                         <p><strong>Letzte Beurteilung:</strong> {{ mitarbeiter.vertragsart }}</p>
                     </div>

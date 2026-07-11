@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Jahresakte {{ jahr }}{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+
+    <div class="p-6 flex items-center">
+      <div class="flex-auto">
+        <h1 class="text-3xl font-bold">
+          Jahresakte {{ jahr }} – {{ einsatz.mitarbeiter.vorname }} {{ einsatz.mitarbeiter.nachname }}
+        </h1>
+        <p class="text-sm text-base-content/70 mt-1">
+          {{ einsatz.stelle.name }} ({{ einsatz.stelle.einrichtung.name }}, {{ einsatz.stelle.einrichtung.traeger.name }})
+          · Umfang {{ einsatz.umfang_prozent|floatformat:"-2" }} %
+          {% if innenauftrag %} · IA {{ innenauftrag.nummer }}{% if innenauftrag.kostenstelle %} · KSt {{ innenauftrag.kostenstelle }}{% endif %}{% endif %}
+        </p>
+      </div>
+      <div class="flex-none space-x-2">
+        <a class="btn btn-neutral" href="{% url "fakturierungsliste" %}?jahr={{ jahr }}">Fakturierung</a>
+        <a class="btn btn-primary" href="{% url "mbw" %}">MBW</a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 p-6">
+
+      <!-- Kalkulation -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">① Hochrechnung (Kalkulation)</h2>
+
+          {% if vorgang and vorgang.kalkulation %}
+            <p class="text-xs text-base-content/60">
+              Stand: {{ vorgang.kalkuliert_am|date:"d.m.Y H:i" }} ·
+              Eingaben: {{ vorgang.kalkulation.eingaben.besoldungsgruppe }} Stufe {{ vorgang.kalkulation.eingaben.stufe }},
+              Ortsklasse {{ vorgang.kalkulation.eingaben.ortsklasse }},
+              {{ vorgang.kalkulation.eingaben.kinder }} Kind(er),
+              {{ vorgang.kalkulation.eingaben.beihilfe_art }},
+              Umlage {{ vorgang.kalkulation.eingaben.versorgungsumlage_satz }}
+            </p>
+
+            <table class="table table-sm max-w-md">
+              <tbody>
+                <tr><td>Grundbezüge (inkl. OFZ, Zulagen, Sonderzahlung)</td><td class="text-right font-mono">{{ vorgang.kalkulation.summen.grundbezuege_gesamt }} €</td></tr>
+                <tr><td>Beihilfeversicherung</td><td class="text-right font-mono">{{ vorgang.kalkulation.summen.beihilfe }} €</td></tr>
+                <tr><td>KV-Zuschuss</td><td class="text-right font-mono">{{ vorgang.kalkulation.summen.kv_zuschuss }} €</td></tr>
+                <tr><td>Umlage Versorgungsfonds</td><td class="text-right font-mono">{{ vorgang.kalkulation.summen.umlage }} €</td></tr>
+                <tr class="font-bold text-primary"><td>Jahres-Hochrechnung</td><td class="text-right font-mono">{{ vorgang.kalkulation.summen.gesamt }} €</td></tr>
+                <tr><td>Abschlag je Quartal (Vorschlag ÷ 4, auf 500 € abgerundet)</td><td class="text-right font-mono">{{ vorgang.abschlag_quartal }} €</td></tr>
+              </tbody>
+            </table>
+
+            <details class="mt-2">
+              <summary class="cursor-pointer text-sm text-primary">Monatsmatrix anzeigen</summary>
+              <div class="overflow-x-auto mt-2">
+                <table class="table table-xs">
+                  <thead>
+                    <tr><th>Monat</th><th class="text-right">Grundbezug</th><th class="text-right">OFZ</th><th class="text-right">OFZ Kinder</th><th class="text-right">Struktur</th><th class="text-right">Sonderz.</th><th class="text-right">Beihilfe</th><th class="text-right">KV</th><th class="text-right">Umlage</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for zeile in vorgang.kalkulation.monate %}
+                    <tr>
+                      <td>{{ zeile.name }}</td>
+                      <td class="text-right font-mono">{{ zeile.grundbezug }}</td>
+                      <td class="text-right font-mono">{{ zeile.ofz }}</td>
+                      <td class="text-right font-mono">{{ zeile.ofz_kinder }}</td>
+                      <td class="text-right font-mono">{{ zeile.strukturzulage }}</td>
+                      <td class="text-right font-mono">{{ zeile.sonderzahlung }}</td>
+                      <td class="text-right font-mono">{{ zeile.beihilfe }}</td>
+                      <td class="text-right font-mono">{{ zeile.kv_zuschuss }}</td>
+                      <td class="text-right font-mono">{{ zeile.umlage }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          {% else %}
+            <p class="text-base-content/60">Noch keine Hochrechnung für {{ jahr }} berechnet.</p>
+          {% endif %}
+
+          {% if perms.mbw.change_fakturierungsvorgang %}
+          <div class="card-actions mt-2">
+            <form method="post" action="{% url 'jahresakte_kalkulieren' einsatz.pk jahr %}">
+              {% csrf_token %}
+              <button class="btn btn-primary" type="submit">
+                {% if vorgang and vorgang.kalkulation %}Neu kalkulieren{% else %}Jetzt kalkulieren{% endif %}
+              </button>
+            </form>
+            {% if vorgang %}
+            <a class="btn btn-outline" href="{% url 'fakturierung_bearbeiten' einsatz.pk %}?jahr={{ jahr }}">
+              Akte bearbeiten (Debitor, Abschlag, Status)
+            </a>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quartale -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">② Quartals-Abschläge {{ jahr }}</h2>
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Quartal</th><th>Art</th><th class="text-right">Betrag</th><th>Verbucht</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for q in quartale %}
+              <tr>
+                <td class="font-bold">Q{{ q.nr }}</td>
+                <td>{% if q.ist_spitze %}Spitzabrechnung{% else %}Abschlag{% endif %}</td>
+                <td class="text-right font-mono">
+                  {% if q.eintrag %}{{ q.eintrag.betrag|default_if_none:"–" }}{% elif not q.ist_spitze and vorgang %}{{ vorgang.abschlag_quartal|default_if_none:"" }}{% endif %}
+                </td>
+                <td>
+                  {% if q.eintrag %}
+                    <span class="badge badge-success">{{ q.eintrag.verbucht_am|date:"d.m.Y" }}</span>
+                  {% else %}
+                    <span class="badge badge-ghost">offen</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if not q.eintrag and perms.mbw.add_quartalsabrechnung %}
+                    {% if q.ist_spitze %}
+                      <span class="text-xs text-base-content/60">nach SAP-Import (folgt)</span>
+                    {% else %}
+                    <form method="post" action="{% url 'quartalsabrechnung_buchen' einsatz.pk %}" class="flex gap-1 items-center">
+                      {% csrf_token %}
+                      <input type="hidden" name="jahr" value="{{ jahr }}" />
+                      <input type="hidden" name="quartal" value="{{ q.nr }}" />
+                      <input type="hidden" name="next" value="{% url 'jahresakte' einsatz.pk jahr %}" />
+                      <input type="text" name="betrag" value="{{ vorgang.abschlag_quartal|default_if_none:'' }}"
+                             class="input input-bordered input-xs w-24 text-right" placeholder="Betrag" />
+                      <button type="submit" class="btn btn-xs btn-outline">Buchen</button>
+                    </form>
+                    {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div class="text-sm text-base-content/70 mt-2">
+            Debitor:
+            {% if debitor %}
+              <strong>{{ debitor }}</strong>{% if vorgang and not vorgang.debitor %} <span class="badge badge-ghost badge-sm">vom Innenauftrag</span>{% endif %}
+            {% else %}
+              <span class="text-warning">kein Debitor zugeordnet</span> –
+              <a class="link" href="{% url 'debitorenliste' %}">Debitoren verwalten</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Spitzabrechnung -->
+      <div class="card bg-base-100 border border-base-200 shadow xl:col-span-2">
+        <div class="card-body">
+          <h2 class="card-title">④ Spitzabrechnung (Ist-Kosten aus SAP)</h2>
+
+          {% if spitze.fehlt %}
+            <p class="text-base-content/60">{{ spitze.fehlt }}
+              {% if not spitze.import_lauf %}<a class="link link-primary" href="{% url 'pk_import_liste' %}">Zum SAP-Import</a>{% endif %}
+            </p>
+          {% else %}
+            <p class="text-xs text-base-content/60">
+              Quelle: {{ spitze.import_lauf.dateiname }} ({{ spitze.import_lauf.hochgeladen_am|date:"d.m.Y" }})
+              {% if spitze.ohne_kalkulation %} · <span class="text-warning">Beihilfe fehlt – erst ① kalkulieren!</span>{% endif %}
+              {% if vorgang.spitze_berechnet_am %} · übernommen am {{ vorgang.spitze_berechnet_am|date:"d.m.Y H:i" }}{% endif %}
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <table class="table table-sm">
+                <tbody>
+                  <tr><td class="font-mono">10159</td><td>Bezüge DiakonInnen (Konto 603100)</td><td class="text-right font-mono">{{ spitze.bezuege }} €</td></tr>
+                  <tr><td class="font-mono">10167</td><td>Umlage Versorgungsfonds (Konto 609800)</td><td class="text-right font-mono">{{ spitze.umlage }} €</td></tr>
+                  <tr><td class="font-mono">10171</td><td>Beihilfepauschale/KV-Zuschuss (aus Kalkulation)</td><td class="text-right font-mono">{{ spitze.pos_beihilfe }} €</td></tr>
+                  <tr class="font-bold"><td></td><td>Personalkosten {{ jahr }} gesamt</td><td class="text-right font-mono">{{ spitze.pk_gesamt }} €</td></tr>
+                </tbody>
+              </table>
+              <table class="table table-sm">
+                <tbody>
+                  <tr>
+                    <td>Abschlagszahlungen ({{ spitze.abschlaege|length }} Stück:
+                      {% for a in spitze.abschlaege %}{{ a.betrag|default_if_none:"?" }}{% if not forloop.last %}, {% endif %}{% endfor %})
+                    </td>
+                    <td class="text-right font-mono">−{{ spitze.abschlag_summe }} €</td>
+                  </tr>
+                  <tr class="font-bold text-primary"><td>Restbetrag Schlussrechnung</td><td class="text-right font-mono">{{ spitze.rest }} €</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card-actions mt-2 items-center">
+              {% if perms.mbw.change_fakturierungsvorgang %}
+              <form method="post" action="{% url 'jahresakte_spitze' einsatz.pk jahr %}">
+                {% csrf_token %}
+                <button class="btn btn-primary" type="submit">Spitze übernehmen</button>
+              </form>
+              {% endif %}
+              {% if innenauftrag %}
+              <a class="btn btn-outline"
+                 href="{% url 'pk_fall_excel' spitze.import_lauf.pk einsatz.mitarbeiter.personalnummer innenauftrag.nummer %}">
+                📥 Fall-Excel (für Dienstgeber)
+              </a>
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if spitze_text %}
+          <div class="border border-base-200 rounded-box p-3 mt-3 max-w-2xl">
+            <div class="flex items-center mb-2">
+              <span class="font-semibold flex-auto">Rechnungstext Schlussrechnung (Q4)</span>
+              <button type="button" class="btn btn-xs btn-primary"
+                      onclick="rechnungstextKopieren('rechnungstext-spitze', this)">📋 Kopieren</button>
+            </div>
+            <pre id="rechnungstext-spitze" class="text-xs whitespace-pre-wrap bg-base-200 rounded p-2 max-h-72 overflow-y-auto">{{ spitze_text }}</pre>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Rechnungstexte -->
+      <div class="card bg-base-100 border border-base-200 shadow xl:col-span-2">
+        <div class="card-body">
+          <h2 class="card-title">③ Rechnungstexte für SAP (Zwischenablage)</h2>
+          {% if rechnungstexte %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {% for rt in rechnungstexte %}
+              <div class="border border-base-200 rounded-box p-3">
+                <div class="flex items-center mb-2">
+                  <span class="font-semibold flex-auto">Abschlag Q{{ rt.quartal }}</span>
+                  <button type="button" class="btn btn-xs btn-primary"
+                          onclick="rechnungstextKopieren('rechnungstext-q{{ rt.quartal }}', this)">
+                    📋 Kopieren
+                  </button>
+                </div>
+                <pre id="rechnungstext-q{{ rt.quartal }}" class="text-xs whitespace-pre-wrap bg-base-200 rounded p-2 max-h-64 overflow-y-auto">{{ rt.text }}</pre>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-base-content/60">
+              Rechnungstexte erscheinen hier, sobald die Hochrechnung berechnet ist.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function rechnungstextKopieren(id, knopf) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const alt = knopf.textContent;
+    knopf.textContent = "✓ Kopiert";
+    setTimeout(() => { knopf.textContent = alt; }, 1500);
+  }).catch(() => {
+    window.prompt("Kopieren mit Strg+C / Cmd+C:", text);
+  });
+}
+</script>
+{% endblock %}

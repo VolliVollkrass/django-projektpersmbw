@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}MBW-Stammdaten{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex items-center">
+      <h1 class="text-3xl font-bold flex-auto">Stammdaten Mittelbewirtschaftung</h1>
+      <a class="btn btn-primary" href="{% url "mbw" %}">MBW</a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+
+      <!-- Besoldungstabellen -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Besoldungstabellen</h2>
+          <table class="table table-sm">
+            <thead><tr><th>Gültig ab</th><th>Erhöhung</th><th></th></tr></thead>
+            <tbody>
+              {% for tabelle in besoldungstabellen %}
+              <tr>
+                <td>{{ tabelle.gueltig_ab|date:"d.m.Y" }}</td>
+                <td>{% if tabelle.erhoehung_prozent %}+{{ tabelle.erhoehung_prozent }} %{% else %}–{% endif %}</td>
+                <td><a class="btn btn-xs btn-outline" href="{% url 'besoldungstabelle_detail' tabelle.pk %}">Beträge</a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-base-content/60">Noch keine Tabelle importiert.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if perms.mbw.add_besoldungstabelle %}
+          <form method="post" action="{% url 'besoldungstabelle_erhoehen' %}" class="flex gap-2 items-end mt-2">
+            {% csrf_token %}
+            <div class="flex-1">
+              <label class="text-xs" for="{{ besoldung_form.gueltig_ab.id_for_label }}">Gültig ab</label>
+              {{ besoldung_form.gueltig_ab }}
+            </div>
+            <div class="flex-1">
+              <label class="text-xs" for="{{ besoldung_form.prozent.id_for_label }}">Erhöhung %</label>
+              {{ besoldung_form.prozent }}
+            </div>
+            <button class="btn btn-primary" type="submit">Fortschreiben</button>
+          </form>
+          <p class="text-xs text-base-content/60">Neue Tabelle = jüngste Tabelle × (1 + Erhöhung), kaufmännisch gerundet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Familienzuschlag -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Orts- und Familienzuschlag (OFZ)</h2>
+          <table class="table table-sm">
+            <thead><tr><th>Gültig ab</th><th>Erhöhung</th><th></th></tr></thead>
+            <tbody>
+              {% for tabelle in fz_tabellen %}
+              <tr>
+                <td>{{ tabelle.gueltig_ab|date:"d.m.Y" }}</td>
+                <td>{% if tabelle.erhoehung_prozent %}+{{ tabelle.erhoehung_prozent }} %{% else %}–{% endif %}</td>
+                <td><a class="btn btn-xs btn-outline" href="{% url 'fz_tabelle_detail' tabelle.pk %}">Beträge</a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-base-content/60">Noch keine Tabelle importiert.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if perms.mbw.add_familienzuschlagtabelle %}
+          <form method="post" action="{% url 'fz_tabelle_erhoehen' %}" class="flex gap-2 items-end mt-2">
+            {% csrf_token %}
+            <div class="flex-1">
+              <label class="text-xs" for="{{ fz_form.gueltig_ab.id_for_label }}">Gültig ab</label>
+              {{ fz_form.gueltig_ab }}
+            </div>
+            <div class="flex-1">
+              <label class="text-xs" for="{{ fz_form.prozent.id_for_label }}">Erhöhung %</label>
+              {{ fz_form.prozent }}
+            </div>
+            <button class="btn btn-primary" type="submit">Fortschreiben</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Beihilfe -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Beihilfesätze (BBK)</h2>
+          <p class="text-sm text-base-content/70">
+            Jahre in der Datenbank:
+            {% for jahr in beihilfe_jahre %}
+              <span class="badge badge-primary badge-outline">{{ jahr }}</span>
+            {% empty %}
+              <span class="text-base-content/60">keine</span>
+            {% endfor %}
+          </p>
+          <p class="text-xs text-base-content/60">
+            Pflege über den Django-Admin (Beihilfesätze) oder jährlich per
+            <code>import_beihilfetarife</code> aus der BBK-Beitragstabelle.
+          </p>
+        </div>
+      </div>
+
+      <!-- Zulagen -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Zulagensätze</h2>
+          <div class="overflow-x-auto max-h-64 overflow-y-auto">
+            <table class="table table-sm">
+              <thead><tr><th>Art</th><th>Variante</th><th>Gültig ab</th><th class="text-right">Betrag</th></tr></thead>
+              <tbody>
+                {% for zulage in zulagen %}
+                <tr>
+                  <td>{{ zulage.get_art_display }}</td>
+                  <td>{{ zulage.variante|default:"–" }}</td>
+                  <td>{{ zulage.gueltig_ab|date:"d.m.Y" }}</td>
+                  <td class="text-right">{{ zulage.betrag }} €</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-base-content/60">Keine Zulagensätze.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Debitoren + Mietenstufen -->
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Debitoren</h2>
+          <p class="text-3xl font-bold text-primary">{{ debitoren_anzahl }}</p>
+          <p class="text-sm text-base-content/70">aktive Rechnungsempfänger (SAP-Debitorenstamm)</p>
+          <div class="card-actions">
+            <a class="btn btn-sm btn-primary" href="{% url 'debitorenliste' %}">Verwalten</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Ortsklassen / Mietenstufen</h2>
+          <p class="text-3xl font-bold text-primary">{{ mietenstufen_anzahl }}</p>
+          <p class="text-sm text-base-content/70">Gemeinden und Landkreise (Wohngeldverordnung)</p>
+          <div class="card-actions">
+            <a class="btn btn-sm btn-primary" href="{% url 'mietenstufen' %}">Nachschlagen</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

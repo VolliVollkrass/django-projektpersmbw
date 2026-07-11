@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}OFZ-Tabelle{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex items-center">
+      <h1 class="text-3xl font-bold flex-auto">Orts- und Familienzuschlag ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}</h1>
+      <a class="btn btn-primary" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}
+      {{ tabelle.bemerkung }}
+    </div>
+
+    <div class="p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div class="overflow-x-auto">
+        <h2 class="font-semibold mb-2">Monatsbeträge je Ortsklasse</h2>
+        <table class="table table-sm table-zebra">
+          <thead>
+            <tr>
+              <th>Ortsklasse</th>
+              <th class="text-right">Stufe L</th>
+              <th class="text-right">Stufe V</th>
+              <th class="text-right">Stufe 1</th>
+              <th class="text-right">Stufe 2</th>
+              <th class="text-right">zzgl. 3. Kind</th>
+              <th class="text-right">zzgl. je weiterem Kind</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for zeile in zeilen %}
+            <tr>
+              <td class="font-bold text-primary">{{ zeile.ortsklasse }}</td>
+              <td class="text-right">{{ zeile.stufe_l|default_if_none:"–" }}</td>
+              <td class="text-right">{{ zeile.stufe_v|default_if_none:"–" }}</td>
+              <td class="text-right">{{ zeile.stufe_1|default_if_none:"–" }}</td>
+              <td class="text-right">{{ zeile.stufe_2|default_if_none:"–" }}</td>
+              <td class="text-right">{{ zeile.kind_3|default_if_none:"–" }}</td>
+              <td class="text-right">{{ zeile.kind_weitere|default_if_none:"–" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="overflow-x-auto">
+        <h2 class="font-semibold mb-2">Erhöhungsbeträge je Kind (A 8 – A 10)</h2>
+        <table class="table table-sm table-zebra max-w-md">
+          <thead>
+            <tr><th>Ortsklasse</th><th>Gruppe</th><th class="text-right">Betrag</th></tr>
+          </thead>
+          <tbody>
+            {% for erhoehung in kinder_erhoehungen %}
+            <tr>
+              <td>{{ erhoehung.ortsklasse }}</td>
+              <td class="font-bold text-primary">{{ erhoehung.gruppe }}</td>
+              <td class="text-right">{{ erhoehung.betrag }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

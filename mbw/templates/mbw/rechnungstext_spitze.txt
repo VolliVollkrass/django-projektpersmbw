@@ -1,0 +1,23 @@
+{% autoescape off %}{% if debitor %}{{ debitor.name }}
+{% if debitor.name2 %}{{ debitor.name2 }}
+{% endif %}{% if debitor.anschriftperson %}{{ debitor.anschriftperson }}
+{% endif %}{% if debitor.strasse %}{{ debitor.strasse }}
+{% endif %}{% if debitor.plz or debitor.ort %}{{ debitor.plz }} {{ debitor.ort }}
+{% endif %}{% if debitor.sap_nummer %}Debitor: {{ debitor.sap_nummer }}
+{% endif %}
+{% endif %}Schlussrechnung {{ jahr }} – Erstattung von Personalkosten (Spitzabrechnung)
+
+Personalkostenerstattung für {{ titel }} {{ mitarbeiter.vorname }} {{ mitarbeiter.nachname }}
+Einsatz: {{ stelle.name }}{% if einrichtung %} ({{ einrichtung.name }}){% endif %}
+Beschäftigungsumfang: {{ einsatz.umfang_prozent|floatformat:"-2" }} %
+Abrechnungszeitraum: 01.01.{{ jahr }} – 31.12.{{ jahr }}
+{% if innenauftrag %}Innenauftrag: {{ innenauftrag.nummer }}{% if innenauftrag.kostenstelle %} · Kostenstelle: {{ innenauftrag.kostenstelle }}{% endif %}
+{% endif %}
+10159  Bezüge DiakonInnen:                    {{ vorgang.pos_bezuege|floatformat:2 }} EUR
+10167  Umlage Versorgungsfonds:               {{ vorgang.pos_umlage|floatformat:2 }} EUR
+10171  Beihilfepauschale/KV-Zuschuss:         {{ vorgang.pos_beihilfe|floatformat:2 }} EUR
+
+Personalkosten {{ jahr }} gesamt:             {{ spitze.pk_gesamt|floatformat:2 }} EUR
+abzüglich Abschlagszahlungen ({{ spitze.abschlaege|length }} × ): -{{ spitze.abschlag_summe|floatformat:2 }} EUR
+
+Restbetrag Schlussrechnung: {{ vorgang.spitze_rest|floatformat:2 }} EUR{% endautoescape %}

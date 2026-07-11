@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Besoldungstabelle{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex items-center">
+      <h1 class="text-3xl font-bold flex-auto">Besoldungstabelle ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}</h1>
+      <a class="btn btn-primary" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}
+      {{ tabelle.bemerkung }}
+    </div>
+
+    <div class="p-6 overflow-x-auto">
+      <table class="table table-sm table-zebra">
+        <thead>
+          <tr>
+            <th>Gruppe</th>
+            {% for stufe in stufen %}<th class="text-right">Stufe {{ stufe }}</th>{% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for zeile in zeilen %}
+          <tr>
+            <td class="font-bold text-primary">{{ zeile.gruppe }}</td>
+            {% for wert in zeile.werte %}
+            <td class="text-right">{% if wert %}{{ wert }}{% else %}–{% endif %}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="text-xs text-base-content/60 mt-2">Monatsbeträge in Euro.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

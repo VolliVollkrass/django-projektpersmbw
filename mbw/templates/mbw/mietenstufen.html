@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Ortsklassen / Mietenstufen{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Ortsklassen / Mietenstufen</h1>
+      <a class="btn btn-primary" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      Ortsklasse = Mietenstufe des Hauptwohnsitzes nach Wohngeldverordnung (BayBesG Art. 36).
+      Gemeinden über 10.000 Einwohner sind direkt zugeordnet, kleinere über ihren Landkreis.
+    </div>
+
+    <div class="p-6 max-w-2xl">
+      <form method="get" action="{% url 'mietenstufen' %}">
+        <label class="input input-bordered flex items-center gap-2">
+          <input type="search" name="q" value="{{ query }}" placeholder="Wohnort oder Landkreis suchen …" class="grow" autofocus />
+        </label>
+      </form>
+      <p class="text-xs text-base-content/60 mt-2">{{ anzahl }} Treffer{% if anzahl > 100 %} (erste 100 angezeigt){% endif %}</p>
+
+      <table class="table table-sm table-zebra mt-4">
+        <thead>
+          <tr><th>Name</th><th>Art</th><th>Mietenstufe / Ortsklasse</th></tr>
+        </thead>
+        <tbody>
+          {% for stufe in mietenstufen %}
+          <tr>
+            <td>{{ stufe.name }}</td>
+            <td>{{ stufe.get_art_display }}</td>
+            <td><span class="badge badge-primary">{{ stufe.stufe }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center text-base-content/60">Keine Treffer.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

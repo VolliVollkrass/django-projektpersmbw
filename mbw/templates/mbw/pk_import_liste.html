@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Personalkosten-Import{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex">
+      <h1 class="text-3xl font-bold flex-auto">Personalkosten aus SAP</h1>
+      <a class="btn btn-primary" href="{% url "mbw" %}">MBW</a>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      SAP-Auswertung des Abrechnungslaufs („Dynamische Listenausgabe“) hochladen –
+      Storno-Paare werden automatisch erkannt, die Zeilen den Innenaufträgen zugeordnet.
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+
+      {% if perms.mbw.add_personalkostenimport %}
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Neue Auswertung hochladen</h2>
+          <form method="post" enctype="multipart/form-data" class="space-y-3">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+              <label class="block mb-1 font-medium" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<p class="text-xs mt-1 text-base-content/60">{{ field.help_text }}</p>{% endif %}
+              {% if field.errors %}<p class="text-error text-sm mt-1">{{ field.errors|join:", " }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <button class="btn btn-primary" type="submit">Einlesen</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card bg-base-100 border border-base-200 shadow">
+        <div class="card-body">
+          <h2 class="card-title">Bisherige Importe</h2>
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Datei</th><th>Jahr</th><th>Hochgeladen</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for lauf in importe %}
+              <tr>
+                <td>{{ lauf.dateiname }}</td>
+                <td>{{ lauf.jahr }}</td>
+                <td class="text-sm">{{ lauf.hochgeladen_am|date:"d.m.Y H:i" }}{% if lauf.hochgeladen_von %} · {{ lauf.hochgeladen_von.username }}{% endif %}</td>
+                <td class="flex gap-1">
+                  <a class="btn btn-xs btn-primary" href="{% url 'pk_import_detail' lauf.pk %}">Öffnen</a>
+                  {% if perms.mbw.delete_personalkostenimport %}
+                  <form method="post" action="{% url 'pk_import_loeschen' lauf.pk %}"
+                        onsubmit="return confirm('Import „{{ lauf.dateiname }}“ mit allen Zeilen löschen?');">
+                    {% csrf_token %}
+                    <button class="btn btn-xs btn-error btn-outline" type="submit">Löschen</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-base-content/60">Noch keine Importe.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

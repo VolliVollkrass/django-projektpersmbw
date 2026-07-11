@@ -16,8 +16,10 @@ class MitarbeiterForm(forms.ModelForm):
         fields = [
             "personalnummer", "geschlecht", "vorname", "nachname", "geburtsdatum",
             "email", "telefon_privat", "telefon_dienst", "strasse", "plz", "ort",
-            "anstellungs_status", "dienststand", "status_besoldung", "status_stufe", 
+            "anstellungs_status", "dienststand", "status_besoldung", "status_stufe",
             "familienstand", "kinder", "kindergeldberechtigt", "anspruch_voll",
+            "ortsklasse", "beihilfe_art", "ehegatte_beihilfe",
+            "beihilfe_monat", "beihilfe_kinder_monat", "kv_zuschuss_monat",
             "aktiv", "bemerkung"
         ]
 
