@@ -192,3 +192,82 @@ class ImportTests(TestCase):
         namen = [config.sheet_name for config, _, _ in blaetter]
         self.assertIn("Träger", namen)
         self.assertIn("Einsätze", namen)
+
+
+class MbwStammdatenRoundtripTests(TestCase):
+    """Debitoren + Innenaufträge nehmen roundtrip-fähig am Export/Import teil."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from mbw.models import Debitor, Innenauftrag
+
+        cls.user = User.objects.create_user("sachbearbeitung", password="x" * 12)
+        cls.traeger = Traeger.objects.create(traeger_id="TR-9", name="Diakonie X", art="dw")
+        einrichtung = Einrichtung.objects.create(
+            einrichtungs_id="E-9", name="Haus Nord", traeger=cls.traeger
+        )
+        cls.stelle = Stelle.objects.create(
+            stellen_id="S-9", name="Gemeindediakon", einrichtung=einrichtung
+        )
+        cls.mitarbeiter = Mitarbeiter.objects.create(
+            personalnummer="20001", vorname="Anna", nachname="Test",
+            geburtsdatum=date(1980, 1, 1),
+        )
+        cls.einsatz = Einsatz.objects.create(
+            stelle=cls.stelle, mitarbeiter=cls.mitarbeiter, beginn=date(2026, 1, 1)
+        )
+        cls.debitor = Debitor.objects.create(
+            name="Rechnungsanschrift X", sap_nummer="1900099999", ort="Nürnberg",
+            traeger=cls.traeger, versandweg=Debitor.Versandweg.EMAIL,
+        )
+        cls.innenauftrag = Innenauftrag.objects.create(
+            nummer="F099999-0001", kostenstelle="3-0312-033", bezeichnung="Testauftrag",
+            debitor=cls.debitor, einsatz=cls.einsatz, andock_art="stelle",
+        )
+
+    def _export_mbw(self):
+        configs = [c for c in SHEETS if c.sheet_name in ("Debitoren", "Innenaufträge")]
+        datensaetze = [(c, c.resource_class().export()) for c in configs]
+        return mappe_schreiben(datensaetze)
+
+    def test_roundtrip_ist_idempotent(self):
+        ergebnisse, gespeichert = import_ausfuehren(self._export_mbw(), self.user, commit=True)
+        self.assertTrue(gespeichert, [e.fehler for e in ergebnisse])
+        blaetter = {e.sheet_name: e for e in ergebnisse}
+        for name in ("Debitoren", "Innenaufträge"):
+            self.assertEqual(blaetter[name].neu, 0, f"{name}: {blaetter[name].fehler}")
+            self.assertEqual(blaetter[name].aktualisiert, 0, f"{name} unterscheidet sich vom Export")
+        # Einsatz-Bezug am Innenauftrag bleibt beim Import unangetastet
+        self.innenauftrag.refresh_from_db()
+        self.assertEqual(self.innenauftrag.einsatz, self.einsatz)
+        self.assertEqual(self.innenauftrag.andock_art, "stelle")
+
+    def test_export_enthaelt_einsatz_infospalten(self):
+        from .xlsx import mappe_lesen
+
+        blaetter = mappe_lesen(self._export_mbw())
+        ia_config, daten, _ = next(b for b in blaetter if b[0].sheet_name == "Innenaufträge")
+        zeile = daten.dict[0]
+        self.assertEqual(zeile["Einsatz (Personalnr.)"], "20001")
+        self.assertEqual(zeile["Einsatz (Stellen-Id)"], "S-9")
+        self.assertEqual(zeile["Debitor-Id"], self.debitor.pk)
+
+    def test_debitor_aenderung_wird_als_update_erkannt(self):
+        from mbw.models import Debitor
+
+        import_ausfuehren(self._export_mbw(), self.user, commit=True)
+        # Ort im Export ändern und erneut importieren
+        wb = openpyxl.load_workbook(self._export_mbw())
+        ws = wb["Debitoren"]
+        kopf = [c.value for c in ws[2]]
+        ort_spalte = kopf.index("Ort") + 1
+        ws.cell(row=3, column=ort_spalte, value="München")
+        puffer = io.BytesIO(); wb.save(puffer); puffer.seek(0)
+
+        ergebnisse, gespeichert = import_ausfuehren(puffer, self.user, commit=True)
+        self.assertTrue(gespeichert, [e.fehler for e in ergebnisse])
+        blatt = {e.sheet_name: e for e in ergebnisse}["Debitoren"]
+        self.assertEqual((blatt.neu, blatt.aktualisiert), (0, 1))
+        self.debitor.refresh_from_db()
+        self.assertEqual(self.debitor.ort, "München")
+        self.assertEqual(Debitor.objects.count(), 1)

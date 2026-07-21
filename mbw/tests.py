@@ -301,7 +301,9 @@ class JahresakteViewTest(TestCase):
         self.client.post(reverse("jahresakte_kalkulieren", args=[self.einsatz.pk, 2025]))
         antwort = self.client.get(reverse("jahresakte", args=[self.einsatz.pk, 2025]))
         self.assertEqual(antwort.status_code, 200)
-        self.assertContains(antwort, "Abschlagsrechnung 1. Quartal 2025")
+        self.assertContains(antwort, "Pers.Nr.")
+        self.assertContains(antwort, "wir bitten um unten aufgeführte Abschlagszahlung")
+        self.assertContains(antwort, "Abschlagszahlung (1. von 4 Teilbeträgen)")
         self.assertContains(antwort, "22500,00 EUR")
 
     def test_quartal_buchen_mit_betrag_und_ruecksprung(self):
@@ -332,6 +334,19 @@ SAP_TESTDATEI = """01.11.2025          Dynamische Listenausgabe          1
 """
 
 
+# Rückrechnung mit Storno VOR Neubuchung + RV-Gegenbuchung über zwei Lohnarten.
+SAP_STORNO_TESTDATEI = """01.11.2025          Dynamische Listenausgabe          1
+\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
+\t\tPersNr\tNachname\tVorname\tL B E\tKostenst.\tAuftrag\tHauptb\tLArt\tLohnart-Langtext\t       Betrag\tWährg\tText\tFürper.\tInper.
+\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t
+\t\t77777\tRück\tRita\tL_3-0120\t3-0312-033\tF031233-0034\t603100\t0001\tGrundbezug\t-5.000,00\tEUR\tHR 08/2025\t202506\t202508
+\t\t77777\tRück\tRita\tL_3-0120\t3-0312-033\tF031233-0034\t603100\t0001\tGrundbezug\t5.000,00\tEUR\tHR 01/2026\t202506\t202601
+\t\t77777\tRück\tRita\tL_3-0120\t3-0312-033\tF031233-0034\t603100\t0001\tGrundbezug\t5.000,00\tEUR\tHR 07/2025\t202507\t202507
+\t\t77777\tRück\tRita\tL_3-0120\t3-0312-033\tF031233-0034\t603100\t1S32\tRentenvers.zuschlag\t700,00\tEUR\tHR 07/2025\t202507\t202507
+\t\t77777\tRück\tRita\tL_3-0120\t3-0312-033\tF031233-0034\t603100\t9V98\tSV Beitrag AG Übernahme\t-700,00\tEUR\tHR 07/2025\t202507\t202507
+"""
+
+
 class SapImportTest(TestCase):
     def _import(self):
         from . import sap_import
@@ -339,6 +354,29 @@ class SapImportTest(TestCase):
         return sap_import.sap_import_anlegen(
             SAP_TESTDATEI.encode("utf-16"), "test.csv"
         )
+
+    def test_storno_reihenfolgeunabhaengig_und_rv_gegenpaar(self):
+        from . import sap_import
+        from .models import PersonalkostenZeile
+
+        lauf, statistik = sap_import.sap_import_anlegen(
+            SAP_STORNO_TESTDATEI.encode("utf-16"), "storno.csv"
+        )
+        # 2 Paare: Rückrechnung (Storno vor Neubuchung) + RV-Gegenbuchung 1S32/9V98
+        self.assertEqual(statistik["storno_paare"], 2)
+
+        zeilen = list(PersonalkostenZeile.objects.filter(import_lauf=lauf).order_by("lfd_nr"))
+        # Zeile 1 (−, früher) und Zeile 2 (+, später) heben sich trotz Reihenfolge auf
+        self.assertEqual(zeilen[0].storno_partner, zeilen[1])
+        # Zeile 3 (verbleibender Grundbezug) bleibt sichtbar
+        self.assertIsNone(zeilen[2].storno_partner)
+        # RV-Gegenbuchung: 1S32 (Zeile 4) <-> 9V98 (Zeile 5) über zwei Lohnarten
+        self.assertEqual(zeilen[3].storno_partner, zeilen[4])
+
+        fall = sap_import.faelle(lauf)[0]
+        # Nur der eine verbleibende Grundbezug zählt; alle Nullpaare fallen raus.
+        self.assertEqual(fall["bezuege"], Decimal("5000.00"))
+        self.assertEqual(fall["gesamt"], Decimal("5000.00"))
 
     def test_parsen_storno_und_jahr(self):
         from .models import PersonalkostenZeile

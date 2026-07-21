@@ -5,13 +5,14 @@
 {% endif %}{% if debitor.plz or debitor.ort %}{{ debitor.plz }} {{ debitor.ort }}
 {% endif %}{% if debitor.sap_nummer %}Debitor: {{ debitor.sap_nummer }}
 {% endif %}
-{% endif %}Abschlagsrechnung {{ quartal }}. Quartal {{ jahr }} – Erstattung von Personalkosten
+{% endif %}Pers.Nr. {{ mitarbeiter.personalnummer }}
+{{ titel }} {{ mitarbeiter.vorname }} {{ mitarbeiter.nachname }}, {{ stelle.name }} bei {{ stelle.einrichtung.traeger.name }}{% if stelle.ort %}, {{ stelle.ort }}{% endif %} mit einem Umfang von {{ einsatz.umfang_prozent|floatformat:"-2" }} % (ID {{ stelle.stellen_id }} ab {{ einsatz.beginn|date:"d.m.Y" }}{% if einsatz.ende %} bis {{ einsatz.ende|date:"d.m.Y" }}{% endif %}),
+Abschlagszahlung {{ jahr }}
 
-Personalkostenerstattung für {{ titel }} {{ mitarbeiter.vorname }} {{ mitarbeiter.nachname }}
-Einsatz: {{ stelle.name }}{% if einrichtung %} ({{ einrichtung.name }}){% endif %}
-Beschäftigungsumfang: {{ einsatz.umfang_prozent|floatformat:"-2" }} %
-Abrechnungszeitraum: 01.01.{{ jahr }} – 31.12.{{ jahr }}
-{% if innenauftrag %}Innenauftrag: {{ innenauftrag.nummer }}{% if innenauftrag.kostenstelle %} · Kostenstelle: {{ innenauftrag.kostenstelle }}{% endif %}
+Sehr geehrte Damen und Herren,
+wir bitten um unten aufgeführte Abschlagszahlung:
+{% if innenauftrag %}
+Innenauftrag: {{ innenauftrag.nummer }}{% if innenauftrag.kostenstelle %} · Kostenstelle: {{ innenauftrag.kostenstelle }}{% endif %}
 {% endif %}
 Abschlagszahlung ({{ quartal }}. von 4 Teilbeträgen) gemäß Hochrechnung {{ jahr }}: {{ abschlag|floatformat:2 }} EUR
 {% if hochrechnung %}(Jahres-Hochrechnung: {{ hochrechnung|floatformat:2 }} EUR){% endif %}{% endautoescape %}

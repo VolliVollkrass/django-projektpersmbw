@@ -13,6 +13,8 @@ from ansprechpartner.models import Ansprechpartner
 from ansprechpartner.resources import AnsprechpartnerResource
 from einsatz.models import Einsatz
 from einsatz.resources import EinsatzResource
+from mbw.models import Debitor, Innenauftrag
+from mbw.resources import DebitorResource, InnenauftragResource
 from personal.models import Mitarbeiter
 from personal.resources import MitarbeiterResource
 from traeger.models import Einrichtung, Stelle, Traeger
@@ -55,6 +57,14 @@ def _q_einsatz(q):
         | Q(mitarbeiter__vorname__icontains=q)
         | Q(mitarbeiter__nachname__icontains=q)
     )
+
+
+def _q_debitor(q):
+    return Q(name__icontains=q) | Q(sap_nummer__icontains=q) | Q(ort__icontains=q)
+
+
+def _q_innenauftrag(q):
+    return Q(nummer__icontains=q) | Q(kostenstelle__icontains=q) | Q(bezeichnung__icontains=q)
 
 
 SHEETS = [
@@ -105,6 +115,22 @@ SHEETS = [
         model=Einsatz,
         pflicht_spalten=("Stellen-Id", "Personalnummer", "Beginn"),
         such_filter=_q_einsatz,
+    ),
+    SheetConfig(
+        sheet_name="Debitoren",
+        slug="debitoren",
+        resource_class=DebitorResource,
+        model=Debitor,
+        pflicht_spalten=("Name",),
+        such_filter=_q_debitor,
+    ),
+    SheetConfig(
+        sheet_name="Innenaufträge",
+        slug="innenauftraege",
+        resource_class=InnenauftragResource,
+        model=Innenauftrag,
+        pflicht_spalten=("Innenauftrag",),
+        such_filter=_q_innenauftrag,
     ),
 ]
 

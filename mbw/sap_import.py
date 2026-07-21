@@ -96,36 +96,75 @@ def sap_datei_parsen(rohdaten):
     return zeilen
 
 
+# RV-Gegenbuchungen: Arbeitgeber-Aufstockung (+) und deren Übernahme (−) laufen
+# über zwei verschiedene Lohnarten und heben sich je Für-Periode auf. Schlüssel
+# ist die jeweils andere Lohnart des Paars.
+RV_GEGENPAARE = {
+    "1S32": "9V98", "9V98": "1S32",
+    "/361": "9V61", "9V61": "/361",
+    "/363": "9V63", "9V63": "/363",
+}
+
+
 def _stornos_markieren(zeilen):
-    """Paart +X/−X gleicher (PersNr, Auftrag, Hauptb, LArt, Fürper).
+    """Markiert sich aufhebende +X/−X-Buchungen als Storno-Paare.
+
+    Zwei Arten von Nullpaaren werden erkannt:
+      1. Rückrechnungen – gleiche Lohnart/Für-Periode/Konto, +X und −X, egal in
+         welcher Reihenfolge sie in der Datei stehen. SAP bucht die Stornierung
+         oft VOR der Neubuchung einer späteren In-Periode; das frühere Verfahren
+         paarte nur mit einem bereits gesehenen Plus und übersah diese Fälle.
+      2. RV-Gegenbuchungen – Aufstockung und Übernahme über zwei verschiedene
+         Lohnarten (siehe RV_GEGENPAARE), die sich je Für-Periode aufheben.
 
     zeilen: Liste von Dicts in Dateireihenfolge; ergänzt je Zeile den Schlüssel
     "storno_index" (Index des Partners) oder None. Rückgabe: Anzahl Paare.
     """
-    gruppen = defaultdict(list)
-    for index, zeile in enumerate(zeilen):
+    for zeile in zeilen:
         zeile["storno_index"] = None
-        schluessel = (
+
+    def paaren(schluessel_fn):
+        """Paart offene +X mit offenen −X je Gruppe. `schluessel_fn` liefert den
+        Gruppen-Schlüssel (oder None, um die Zeile zu überspringen)."""
+        positive = defaultdict(list)  # (Gruppe, |Betrag|) -> [Index, ...]
+        negative = defaultdict(list)
+        for index, zeile in enumerate(zeilen):
+            if zeile["storno_index"] is not None:
+                continue
+            gruppe = schluessel_fn(zeile)
+            if gruppe is None:
+                continue
+            betrag = zeile["betrag"]
+            ziel = positive if betrag >= 0 else negative
+            ziel[(gruppe, abs(betrag))].append(index)
+
+        anzahl = 0
+        for schluessel, pos_indizes in positive.items():
+            for pos_index, neg_index in zip(pos_indizes, negative.get(schluessel, [])):
+                zeilen[pos_index]["storno_index"] = neg_index
+                zeilen[neg_index]["storno_index"] = pos_index
+                anzahl += 1
+        return anzahl
+
+    def gleiche_lohnart(zeile):
+        return (
             zeile["personalnummer"], zeile["auftrag_nummer"],
             zeile["hauptbuchkonto"], zeile["lohnart"], zeile["fuer_periode"],
         )
-        gruppen[schluessel].append(index)
 
-    paare = 0
-    for indizes in gruppen.values():
-        offene_positive = defaultdict(list)  # Betrag -> [Index, ...]
-        for index in indizes:
-            betrag = zeilen[index]["betrag"]
-            if betrag >= 0:
-                offene_positive[betrag].append(index)
-                continue
-            kandidaten = offene_positive.get(-betrag)
-            if kandidaten:
-                partner = kandidaten.pop(0)
-                zeilen[index]["storno_index"] = partner
-                zeilen[partner]["storno_index"] = index
-                paare += 1
-    return paare
+    def rv_gegenpaar(zeile):
+        partner = RV_GEGENPAARE.get(zeile["lohnart"])
+        if partner is None:
+            return None
+        # Beide Lohnarten sortiert -> beide Seiten landen in derselben Gruppe.
+        lohnart_paar = tuple(sorted((zeile["lohnart"], partner)))
+        return (
+            zeile["personalnummer"], zeile["auftrag_nummer"],
+            zeile["hauptbuchkonto"], lohnart_paar, zeile["fuer_periode"],
+        )
+
+    # Erst die einfachen Rückrechnungen, dann die verbleibenden RV-Gegenbuchungen.
+    return paaren(gleiche_lohnart) + paaren(rv_gegenpaar)
 
 
 @transaction.atomic
@@ -195,7 +234,9 @@ def faelle(import_lauf):
                 "konten": defaultdict(lambda: Decimal("0")),
             }
         fall["zeilen_anzahl"] += 1
-        fall["konten"][zeile.hauptbuchkonto] += zeile.betrag
+        # Storno-Paare heben sich auf – nur sichtbare Zeilen fließen in die Summen.
+        if zeile.storno_partner_id is None:
+            fall["konten"][zeile.hauptbuchkonto] += zeile.betrag
 
     for fall in ergebnis.values():
         fall["konten"] = dict(fall["konten"])
@@ -224,5 +265,7 @@ def fall_zeilen(import_lauf, personalnummer, auftrag_nummer):
             gruppen.append({"lohnart": zeile.lohnart, "lohnart_text": zeile.lohnart_text, "zeilen": [], "summe": Decimal("0")})
         gruppe = gruppen[index[schluessel]]
         gruppe["zeilen"].append(zeile)
-        gruppe["summe"] += zeile.betrag
+        # Storno-Zeilen bleiben sichtbar (grau markiert), zählen aber nicht zur Summe.
+        if zeile.storno_partner_id is None:
+            gruppe["summe"] += zeile.betrag
     return gruppen
