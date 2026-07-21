@@ -4,6 +4,8 @@ from .views import (
     abrechnungsliste,
     besoldungstabelle_detail,
     besoldungstabelle_erhoehen,
+    cockpit,
+    cockpit_export,
     debitor_create,
     debitor_update,
     debitorenliste,
@@ -30,12 +32,18 @@ from .views import (
     quartalsabrechnung_buchen,
     quartalsuebersicht,
     stammdaten,
+    zahlungseingang_anlegen,
+    zahlungseingang_loeschen,
 )
 
 urlpatterns = [
     path("jahresakte/<int:pk>/<int:jahr>/", jahresakte, name="jahresakte"),
     path("jahresakte/<int:pk>/<int:jahr>/kalkulieren/", jahresakte_kalkulieren, name="jahresakte_kalkulieren"),
     path("jahresakte/<int:pk>/<int:jahr>/spitze/", jahresakte_spitze, name="jahresakte_spitze"),
+    path("jahresakte/<int:pk>/<int:jahr>/zahlung/", zahlungseingang_anlegen, name="zahlungseingang_anlegen"),
+    path("zahlung/<int:pk>/loeschen/", zahlungseingang_loeschen, name="zahlungseingang_loeschen"),
+    path("cockpit/", cockpit, name="cockpit"),
+    path("cockpit/export/", cockpit_export, name="cockpit_export"),
     path("pk-import/", pk_import_liste, name="pk_import_liste"),
     path("pk-import/<int:pk>/", pk_import_detail, name="pk_import_detail"),
     path("pk-import/<int:pk>/loeschen/", pk_import_loeschen, name="pk_import_loeschen"),

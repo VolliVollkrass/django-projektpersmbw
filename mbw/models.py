@@ -1,4 +1,8 @@
+from decimal import Decimal
+
+from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Sum
 from django.utils.timezone import localdate
 
 from einsatz.models import Einsatz
@@ -302,6 +306,49 @@ class Fakturierungsvorgang(models.Model):
     def __str__(self):
         return f"{self.jahr} - {self.einsatz_id}"
 
+    # --- Debitor-Status: aus Forderung und Zahlungseingängen abgeleitet ------
+
+    @property
+    def abschlaege_summe(self):
+        """Summe der gebuchten Quartals-Abschläge Q1–Q3 dieses Jahres."""
+        return self.einsatz.quartalsabrechnungen.filter(
+            jahr=self.jahr, quartal__lte=3
+        ).aggregate(s=Sum("betrag"))["s"] or Decimal("0")
+
+    @property
+    def forderung_gesamt(self):
+        """Gestellte Rechnungen = Abschläge Q1–Q3 + Spitze-Restbetrag (falls berechnet)."""
+        soll = self.abschlaege_summe
+        if self.spitze_rest is not None:
+            soll += self.spitze_rest
+        return soll
+
+    @property
+    def bezahlt_summe(self):
+        return self.zahlungseingaenge.aggregate(s=Sum("betrag"))["s"] or Decimal("0")
+
+    @property
+    def offener_betrag(self):
+        return self.forderung_gesamt - self.bezahlt_summe
+
+    def status_ableiten(self):
+        """Debitor-Status aus Forderung und Zahlungseingängen (ohne Speichern)."""
+        soll = self.forderung_gesamt
+        bezahlt = self.bezahlt_summe
+        if bezahlt <= 0:
+            return self.DebitorStatus.OFFEN
+        if soll <= 0 or bezahlt >= soll:
+            return self.DebitorStatus.AUSGEGLICHEN
+        return self.DebitorStatus.TEILWEISE
+
+    def debitor_status_aktualisieren(self):
+        """Leitet den Status neu ab und speichert ihn, wenn er sich geändert hat."""
+        neu = self.status_ableiten()
+        if neu != self.debitor_status:
+            self.debitor_status = neu
+            type(self).objects.filter(pk=self.pk).update(debitor_status=neu)
+        return neu
+
     class Meta:
         ordering = ["-jahr", "einsatz_id"]
         constraints = [
@@ -310,6 +357,37 @@ class Fakturierungsvorgang(models.Model):
                 name="unique_fakturierung_pro_einsatz_und_jahr",
             )
         ]
+
+
+class Zahlungseingang(models.Model):
+    """Einzelne Zahlung eines Debitors auf eine Jahresakte (Fakturierungsvorgang).
+
+    Der Debitor-Status der Jahresakte wird daraus automatisch abgeleitet
+    (offen / teilweise / ausgeglichen) statt von Hand gepflegt.
+    """
+
+    vorgang = models.ForeignKey(
+        Fakturierungsvorgang,
+        on_delete=models.CASCADE,
+        related_name="zahlungseingaenge",
+        verbose_name="Jahresakte",
+    )
+    datum = models.DateField("Zahlungsdatum", default=localdate)
+    betrag = models.DecimalField("Betrag", max_digits=12, decimal_places=2)
+    bemerkung = models.CharField("Bemerkung", max_length=200, blank=True)
+
+    erfasst_von = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    erfasst_am = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.datum:%d.%m.%Y}: {self.betrag} €"
+
+    class Meta:
+        ordering = ["datum", "id"]
+        verbose_name = "Zahlungseingang"
+        verbose_name_plural = "Zahlungseingänge"
 
 
 BESOLDUNGSGRUPPEN = [

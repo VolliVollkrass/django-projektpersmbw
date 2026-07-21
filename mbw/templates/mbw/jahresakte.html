@@ -246,6 +246,69 @@
         </div>
       </div>
 
+      <!-- Zahlungseingänge -->
+      <div class="card bg-base-100 border border-base-200 shadow xl:col-span-2">
+        <div class="card-body">
+          <h2 class="card-title">⑤ Zahlungseingänge &amp; Debitor-Status</h2>
+
+          {% if vorgang %}
+            <div class="flex flex-wrap gap-6 items-center text-sm">
+              <div>Forderung (Abschläge&nbsp;+&nbsp;Rest): <span class="font-mono font-bold">{{ forderung_gesamt|default_if_none:"0" }} €</span></div>
+              <div>Bezahlt: <span class="font-mono font-bold">{{ bezahlt_summe }} €</span></div>
+              <div>Offen: <span class="font-mono font-bold">{{ offener_betrag|default_if_none:"0" }} €</span></div>
+              <div>
+                Status:
+                {% if vorgang.debitor_status == 'ausgeglichen' %}<span class="badge badge-success">Ausgeglichen</span>
+                {% elif vorgang.debitor_status == 'teilweise' %}<span class="badge badge-warning">Teilweise</span>
+                {% else %}<span class="badge badge-ghost">Offen</span>{% endif %}
+                <span class="text-xs text-base-content/50">(automatisch abgeleitet)</span>
+              </div>
+            </div>
+
+            <table class="table table-sm mt-3 max-w-2xl">
+              <thead>
+                <tr><th>Datum</th><th class="text-right">Betrag</th><th>Bemerkung</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for z in zahlungen %}
+                <tr>
+                  <td>{{ z.datum|date:"d.m.Y" }}</td>
+                  <td class="text-right font-mono">{{ z.betrag }} €</td>
+                  <td class="text-sm">{{ z.bemerkung }}</td>
+                  <td class="text-right">
+                    {% if perms.mbw.delete_zahlungseingang %}
+                    <form method="post" action="{% url 'zahlungseingang_loeschen' z.pk %}"
+                          onsubmit="return confirm('Zahlungseingang löschen?');">
+                      {% csrf_token %}
+                      <button class="btn btn-xs btn-ghost text-error" type="submit" title="Löschen">✕</button>
+                    </form>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-base-content/60">Noch keine Zahlungseingänge erfasst.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            {% if perms.mbw.add_zahlungseingang %}
+            <form method="post" action="{% url 'zahlungseingang_anlegen' einsatz.pk jahr %}"
+                  class="flex flex-wrap gap-3 items-end mt-3">
+              {% csrf_token %}
+              <label class="text-sm w-40">Datum<br>{{ zahlung_form.datum }}</label>
+              <label class="text-sm w-40">Betrag (€)<br>{{ zahlung_form.betrag }}</label>
+              <label class="text-sm flex-auto min-w-40">Bemerkung<br>{{ zahlung_form.bemerkung }}</label>
+              <button class="btn btn-primary" type="submit">Zahlung erfassen</button>
+            </form>
+            {% endif %}
+          {% else %}
+            <p class="text-base-content/60">
+              Zahlungseingänge können erfasst werden, sobald die Jahresakte angelegt ist (z. B. nach dem Kalkulieren).
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

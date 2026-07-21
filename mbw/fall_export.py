@@ -209,6 +209,71 @@ def einzel_mappe(import_lauf, fall):
     return puffer
 
 
+STATUS_LABEL = {
+    "offen": "Offen",
+    "teilweise": "Teilweise",
+    "ausgeglichen": "Ausgeglichen",
+}
+
+
+def cockpit_mappe(jahr, zeilen, summen, stufen):
+    """Jahres-Cockpit als Excel: Pipeline-Status + Beträge je Abrechnungsfall."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Cockpit {jahr}"
+
+    ws.cell(row=1, column=1, value=f"Jahres-Cockpit {jahr} – Abrechnungsstatus").font = TITEL_SCHRIFT
+
+    stufen_labels = [label for _, label in stufen]
+    kopf = ["Mitarbeiter", "PersNr", "Stelle", "Innenauftrag", "Debitor"] + stufen_labels + [
+        "Status", "Hochrechnung", "Abschläge", "Rest", "Bezahlt", "Offen",
+    ]
+    kopf_zeile = 3
+    for spalte, beschriftung in enumerate(kopf, start=1):
+        zelle = ws.cell(row=kopf_zeile, column=spalte, value=beschriftung)
+        zelle.font = KOPF_SCHRIFT
+        zelle.fill = KOPF_FUELLUNG
+    breiten = [22, 8, 22, 15, 24] + [7] * len(stufen_labels) + [13, 13, 13, 13, 13, 13]
+    for spalte, breite in enumerate(breiten, start=1):
+        ws.column_dimensions[get_column_letter(spalte)].width = breite
+    ws.freeze_panes = "A4"
+
+    betrag_start = 6 + len(stufen_labels) + 1  # erste Betragsspalte (Hochrechnung)
+    zeilen_nr = kopf_zeile + 1
+    for eintrag in zeilen:
+        einsatz = eintrag["einsatz"]
+        werte = [
+            f"{einsatz.mitarbeiter.nachname}, {einsatz.mitarbeiter.vorname}",
+            einsatz.mitarbeiter.personalnummer,
+            einsatz.stelle.name,
+            eintrag["innenauftrag"].nummer if eintrag["innenauftrag"] else "",
+            str(eintrag["debitor"]) if eintrag["debitor"] else "",
+        ]
+        werte += ["✓" if eintrag["stufen"][key] else "–" for key, _ in stufen]
+        werte.append(STATUS_LABEL.get(eintrag["status"], ""))
+        for spalte, wert in enumerate(werte, start=1):
+            zelle = ws.cell(row=zeilen_nr, column=spalte, value=wert)
+            if 6 <= spalte <= 5 + len(stufen_labels) + 1:
+                zelle.alignment = Alignment(horizontal="center")
+        for offset, feld in enumerate(("hochrechnung", "abschlaege", "spitze_rest", "bezahlt", "offen")):
+            _betrag_zelle(ws, zeilen_nr, betrag_start + offset, eintrag[feld])
+        if zeilen_nr % 2 == 0:
+            for spalte in range(1, len(kopf) + 1):
+                ws.cell(row=zeilen_nr, column=spalte).fill = BLOCK_FUELLUNG
+        zeilen_nr += 1
+
+    ws.cell(row=zeilen_nr, column=1, value=f"Summe ({summen['faelle']} Fälle)").font = SUMME_SCHRIFT
+    for offset, feld in enumerate(("hochrechnung", "abschlaege", "spitze_rest", "bezahlt", "offen")):
+        _betrag_zelle(ws, zeilen_nr, betrag_start + offset, summen[feld], fett=True)
+    for spalte in range(1, len(kopf) + 1):
+        ws.cell(row=zeilen_nr, column=spalte).fill = SUMME_FUELLUNG
+
+    puffer = io.BytesIO()
+    wb.save(puffer)
+    puffer.seek(0)
+    return puffer
+
+
 def debitor_mappe(import_lauf, debitor, faelle_liste):
     """Sammelmappe: Deckblatt mit Übersicht + ein Blatt je Fall."""
     wb = Workbook()

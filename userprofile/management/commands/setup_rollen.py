@@ -24,6 +24,7 @@ FACHMODELLE = [
     ("mbw", "mietenstufe"),
     ("mbw", "personalkostenimport"),
     ("mbw", "personalkostenzeile"),
+    ("mbw", "zahlungseingang"),
     ("beurteilung", "supervisor"),
     ("beurteilung", "evaluationrequest"),
     ("beurteilung", "evaluation"),

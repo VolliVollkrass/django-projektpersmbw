@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Debitor, Fakturierungsvorgang, Innenauftrag
+from .models import Debitor, Fakturierungsvorgang, Innenauftrag, Zahlungseingang
 
 FELD_KLASSE = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-purple-800"
 
@@ -75,7 +75,6 @@ class FakturierungsvorgangForm(forms.ModelForm):
             "rechnung_pdf",
             "versandart",
             "versandt_am",
-            "debitor_status",
             "debitor_geprueft_am",
             "bemerkung",
         ]
@@ -100,6 +99,20 @@ class FakturierungsvorgangForm(forms.ModelForm):
                     "class": "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-purple-800"
                 }
             )
+
+
+class ZahlungseingangForm(forms.ModelForm):
+    class Meta:
+        model = Zahlungseingang
+        fields = ["datum", "betrag", "bemerkung"]
+        widgets = {
+            "datum": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for _, field in self.fields.items():
+            field.widget.attrs.update({"class": FELD_KLASSE})
 
 
 class PKImportForm(forms.Form):

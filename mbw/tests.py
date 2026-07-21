@@ -513,3 +513,122 @@ class DebitorNummerTest(TestCase):
         # reine Vermerke ergeben keine Nummer
         for vermerk in ("offen", "keinen", "DB LA", "DB Su-Ro", ""):
             self.assertEqual(_debitor_nummer(vermerk), "")
+
+
+class ZahlungseingangStatusTest(TestCase):
+    """Debitor-Status wird aus Forderung (Abschläge + Rest) und Zahlungen abgeleitet."""
+
+    def setUp(self):
+        from .models import Fakturierungsvorgang, Quartalsabrechnung
+
+        self.einsatz = _muster_einsatz()
+        self.vorgang = Fakturierungsvorgang.objects.create(einsatz=self.einsatz, jahr=2025)
+        for quartal in (1, 2, 3):
+            Quartalsabrechnung.objects.create(
+                einsatz=self.einsatz, jahr=2025, quartal=quartal, betrag=Decimal("1000.00")
+            )
+
+    def test_status_ableitung(self):
+        from .models import Fakturierungsvorgang, Zahlungseingang
+
+        S = Fakturierungsvorgang.DebitorStatus
+        self.assertEqual(self.vorgang.forderung_gesamt, Decimal("3000.00"))
+        self.assertEqual(self.vorgang.status_ableiten(), S.OFFEN)
+
+        Zahlungseingang.objects.create(vorgang=self.vorgang, betrag=Decimal("1000.00"))
+        self.vorgang.debitor_status_aktualisieren()
+        self.assertEqual(self.vorgang.status_ableiten(), S.TEILWEISE)
+        self.assertEqual(self.vorgang.offener_betrag, Decimal("2000.00"))
+        self.assertEqual(self.vorgang.debitor_status, S.TEILWEISE)
+
+        Zahlungseingang.objects.create(vorgang=self.vorgang, betrag=Decimal("2000.00"))
+        self.assertEqual(self.vorgang.status_ableiten(), S.AUSGEGLICHEN)
+        self.assertEqual(self.vorgang.offener_betrag, Decimal("0.00"))
+
+    def test_spitze_rest_erhoeht_forderung(self):
+        self.vorgang.spitze_rest = Decimal("500.00")
+        self.vorgang.save()
+        self.assertEqual(self.vorgang.forderung_gesamt, Decimal("3500.00"))
+
+
+@override_settings(STORAGES=OHNE_MANIFEST)
+class ZahlungseingangViewTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Permission
+        from .models import Fakturierungsvorgang, Quartalsabrechnung
+
+        self.einsatz = _muster_einsatz()
+        Fakturierungsvorgang.objects.create(einsatz=self.einsatz, jahr=2025)
+        Quartalsabrechnung.objects.create(
+            einsatz=self.einsatz, jahr=2025, quartal=1, betrag=Decimal("1000.00")
+        )
+        self.user = User.objects.create_user("sb", password="x")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename="add_zahlungseingang"),
+            Permission.objects.get(codename="delete_zahlungseingang"),
+        )
+        self.client.force_login(self.user)
+
+    def test_zahlung_anlegen_und_loeschen_aktualisiert_status(self):
+        from .models import Fakturierungsvorgang, Zahlungseingang
+
+        antwort = self.client.post(
+            reverse("zahlungseingang_anlegen", args=[self.einsatz.pk, 2025]),
+            {"datum": "2025-04-15", "betrag": "1000", "bemerkung": "Überweisung"},
+        )
+        self.assertRedirects(antwort, reverse("jahresakte", args=[self.einsatz.pk, 2025]))
+        vorgang = Fakturierungsvorgang.objects.get(einsatz=self.einsatz, jahr=2025)
+        self.assertEqual(vorgang.debitor_status, Fakturierungsvorgang.DebitorStatus.AUSGEGLICHEN)
+
+        zahlung = Zahlungseingang.objects.get()
+        self.assertEqual(zahlung.erfasst_von, self.user)
+        self.client.post(reverse("zahlungseingang_loeschen", args=[zahlung.pk]))
+        vorgang.refresh_from_db()
+        self.assertEqual(Zahlungseingang.objects.count(), 0)
+        self.assertEqual(vorgang.debitor_status, Fakturierungsvorgang.DebitorStatus.OFFEN)
+
+    def test_jahresakte_zeigt_zahlungssektion(self):
+        antwort = self.client.get(reverse("jahresakte", args=[self.einsatz.pk, 2025]))
+        self.assertContains(antwort, "Zahlungseingänge")
+
+
+@override_settings(STORAGES=OHNE_MANIFEST)
+class CockpitTest(TestCase):
+    def setUp(self):
+        from .models import Fakturierungsvorgang, Quartalsabrechnung
+        from django.utils.timezone import now
+
+        self.einsatz = _muster_einsatz()  # beginn 2025-01-01, abrechnung=True
+        vorgang = Fakturierungsvorgang.objects.create(
+            einsatz=self.einsatz, jahr=2025, hochrechnung_gesamt=Decimal("80000.00"),
+            kalkuliert_am=now(),
+        )
+        Quartalsabrechnung.objects.create(
+            einsatz=self.einsatz, jahr=2025, quartal=1, betrag=Decimal("1500.00")
+        )
+        self.user = User.objects.create_user("leser", password="x")
+        self.client.force_login(self.user)
+
+    def test_cockpit_zeigt_fall_mit_pipeline(self):
+        antwort = self.client.get(reverse("cockpit") + "?jahr=2025")
+        self.assertEqual(antwort.status_code, 200)
+        self.assertContains(antwort, "Mustermann, Eva")
+        self.assertContains(antwort, "Jahres-Cockpit 2025")
+
+    def test_einsatz_ausserhalb_jahr_nicht_gelistet(self):
+        antwort = self.client.get(reverse("cockpit") + "?jahr=2024")
+        self.assertNotContains(antwort, "Mustermann, Eva")
+
+    def test_cockpit_export_liefert_xlsx(self):
+        import io
+        import openpyxl
+
+        antwort = self.client.get(reverse("cockpit_export") + "?jahr=2025")
+        self.assertEqual(antwort.status_code, 200)
+        self.assertIn("spreadsheetml", antwort["Content-Type"])
+        wb = openpyxl.load_workbook(io.BytesIO(antwort.content))
+        ws = wb.active
+        self.assertEqual(ws["A1"].value, "Jahres-Cockpit 2025 – Abrechnungsstatus")
+        # Beispielperson taucht in Spalte A auf
+        werte = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
+        self.assertIn("Mustermann, Eva", werte)

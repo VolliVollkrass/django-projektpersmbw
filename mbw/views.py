@@ -11,7 +11,13 @@ from django.urls import reverse
 from einsatz.models import Einsatz
 
 from . import kalkulation, services
-from .forms import DebitorForm, FakturierungsvorgangForm, InnenauftragForm, TabellenErhoehungForm
+from .forms import (
+    DebitorForm,
+    FakturierungsvorgangForm,
+    InnenauftragForm,
+    TabellenErhoehungForm,
+    ZahlungseingangForm,
+)
 from .models import (
     Beihilfesatz,
     Besoldungstabelle,
@@ -330,6 +336,10 @@ def quartalsabrechnung_buchen(request, pk):
             request,
             f"Q{quartal} ({eintrag.get_art_display()}) für {einsatz.mitarbeiter} wurde verbucht.",
         )
+        # Forderung hat sich geändert → Debitor-Status neu ableiten (falls Akte existiert)
+        vorgang = Fakturierungsvorgang.objects.filter(einsatz=einsatz, jahr=jahr).first()
+        if vorgang:
+            vorgang.debitor_status_aktualisieren()
 
     next_url = request.POST.get("next")
     if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
@@ -641,6 +651,8 @@ def jahresakte(request, pk, jahr):
             },
         ).strip()
 
+    zahlungen = list(vorgang.zahlungseingaenge.all()) if vorgang else []
+
     context = {
         "einsatz": einsatz,
         "jahr": int(jahr),
@@ -652,8 +664,55 @@ def jahresakte(request, pk, jahr):
         "rechnungstexte": rechnungstexte,
         "spitze": spitze,
         "spitze_text": spitze_text,
+        "zahlungen": zahlungen,
+        "zahlung_form": ZahlungseingangForm(),
+        "forderung_gesamt": vorgang.forderung_gesamt if vorgang else None,
+        "bezahlt_summe": vorgang.bezahlt_summe if vorgang else Decimal("0"),
+        "offener_betrag": vorgang.offener_betrag if vorgang else None,
     }
     return render(request, "mbw/jahresakte.html", context)
+
+
+@login_required
+@permission_required("mbw.add_zahlungseingang", raise_exception=True)
+def zahlungseingang_anlegen(request, pk, jahr):
+    einsatz = _einsatz_fuer_jahresakte(pk)
+    if request.method != "POST":
+        return redirect("jahresakte", pk=pk, jahr=jahr)
+
+    vorgang, _ = Fakturierungsvorgang.objects.get_or_create(einsatz=einsatz, jahr=jahr)
+    form = ZahlungseingangForm(request.POST)
+    if form.is_valid():
+        zahlung = form.save(commit=False)
+        zahlung.vorgang = vorgang
+        zahlung.erfasst_von = request.user
+        zahlung.save()
+        vorgang.debitor_status_aktualisieren()
+        messages.success(
+            request,
+            f"Zahlungseingang {zahlung.betrag} € vom {zahlung.datum:%d.%m.%Y} erfasst.",
+        )
+    else:
+        for feld, fehler in form.errors.items():
+            messages.error(request, f"{feld}: {', '.join(fehler)}")
+    return redirect("jahresakte", pk=pk, jahr=jahr)
+
+
+@login_required
+@permission_required("mbw.delete_zahlungseingang", raise_exception=True)
+def zahlungseingang_loeschen(request, pk):
+    from .models import Zahlungseingang
+
+    zahlung = get_object_or_404(
+        Zahlungseingang.objects.select_related("vorgang"), pk=pk
+    )
+    vorgang = zahlung.vorgang
+    einsatz_pk, jahr = vorgang.einsatz_id, vorgang.jahr
+    if request.method == "POST":
+        zahlung.delete()
+        vorgang.debitor_status_aktualisieren()
+        messages.success(request, "Zahlungseingang gelöscht.")
+    return redirect("jahresakte", pk=einsatz_pk, jahr=jahr)
 
 
 @login_required
@@ -918,6 +977,7 @@ def jahresakte_spitze(request, pk, jahr):
     vorgang.spitze_rest = daten["rest"]
     vorgang.spitze_berechnet_am = now()
     vorgang.save()
+    vorgang.debitor_status_aktualisieren()
 
     messages.success(
         request,
@@ -925,3 +985,154 @@ def jahresakte_spitze(request, pk, jahr):
         f"(PK gesamt {daten['pk_gesamt']} €, Abschläge {daten['abschlag_summe']} €).",
     )
     return redirect("jahresakte", pk=pk, jahr=jahr)
+
+
+# --- Jahres-Cockpit ---------------------------------------------------------
+
+# Pipeline-Stufen des Cockpits (Schlüssel -> Kurzlabel für die Kopfzeile)
+COCKPIT_STUFEN = [
+    ("kalkuliert", "Kalk."),
+    ("q1", "Q1"),
+    ("q2", "Q2"),
+    ("q3", "Q3"),
+    ("import", "SAP"),
+    ("spitze", "Spitze"),
+    ("rechnung", "Rechn."),
+]
+
+
+def _cockpit_status(forderung, bezahlt):
+    if bezahlt <= 0:
+        return Fakturierungsvorgang.DebitorStatus.OFFEN
+    if forderung <= 0 or bezahlt >= forderung:
+        return Fakturierungsvorgang.DebitorStatus.AUSGEGLICHEN
+    return Fakturierungsvorgang.DebitorStatus.TEILWEISE
+
+
+def _cockpit_zeilen(jahr):
+    """Eine Zeile je Abrechnungs-Einsatz, der im Jahr aktiv ist, mit Pipeline-Status."""
+    from datetime import date
+
+    from django.db.models import Sum
+
+    from .models import PersonalkostenZeile
+
+    jahr_beginn, jahr_ende = date(jahr, 1, 1), date(jahr, 12, 31)
+    einsaetze = (
+        Einsatz.objects.filter(abrechnung=True, beginn__lte=jahr_ende)
+        .filter(Q(ende__isnull=True) | Q(ende__gte=jahr_beginn))
+        .select_related(
+            "mitarbeiter", "stelle", "stelle__einrichtung", "stelle__einrichtung__traeger",
+            "innenauftrag", "innenauftrag__debitor",
+        )
+        .order_by("mitarbeiter__nachname", "mitarbeiter__vorname")
+    )
+
+    vorgaenge = {
+        v.einsatz_id: v
+        for v in Fakturierungsvorgang.objects.filter(jahr=jahr).annotate(
+            bezahlt=Sum("zahlungseingaenge__betrag")
+        )
+    }
+    quartale = {}
+    for eintrag in Quartalsabrechnung.objects.filter(jahr=jahr, quartal__lte=3):
+        quartale.setdefault(eintrag.einsatz_id, {})[eintrag.quartal] = eintrag.betrag
+    importiert = set(
+        PersonalkostenZeile.objects.filter(import_lauf__jahr=jahr)
+        .values_list("auftrag_nummer", "personalnummer")
+        .distinct()
+    )
+
+    zeilen = []
+    for einsatz in einsaetze:
+        vorgang = vorgaenge.get(einsatz.pk)
+        q_betraege = quartale.get(einsatz.pk, {})
+        innenauftrag = getattr(einsatz, "innenauftrag", None)
+        personalnummer = einsatz.mitarbeiter.personalnummer
+
+        abschlaege = sum((b or Decimal("0") for b in q_betraege.values()), Decimal("0"))
+        spitze_rest = vorgang.spitze_rest if vorgang else None
+        forderung = abschlaege + (spitze_rest or Decimal("0"))
+        bezahlt = (vorgang.bezahlt if vorgang and vorgang.bezahlt else Decimal("0")) if vorgang else Decimal("0")
+
+        stufen = {
+            "kalkuliert": bool(vorgang and vorgang.kalkuliert_am),
+            "q1": 1 in q_betraege,
+            "q2": 2 in q_betraege,
+            "q3": 3 in q_betraege,
+            "import": bool(innenauftrag and (innenauftrag.nummer, personalnummer) in importiert),
+            "spitze": bool(vorgang and vorgang.spitze_berechnet_am),
+            "rechnung": bool(vorgang and (vorgang.sap_erfasst_am or vorgang.rechnungsnummer)),
+        }
+
+        zeilen.append({
+            "einsatz": einsatz,
+            "vorgang": vorgang,
+            "innenauftrag": innenauftrag,
+            "debitor": (vorgang.debitor if vorgang and vorgang.debitor else None)
+                       or (innenauftrag.debitor if innenauftrag else None),
+            "stufen": stufen,
+            "stufen_liste": [(label, stufen[key]) for key, label in COCKPIT_STUFEN],
+            "status": _cockpit_status(forderung, bezahlt) if vorgang else None,
+            "hochrechnung": vorgang.hochrechnung_gesamt if vorgang else None,
+            "abschlaege": abschlaege,
+            "spitze_rest": spitze_rest,
+            "bezahlt": bezahlt,
+            "offen": forderung - bezahlt,
+        })
+    return zeilen
+
+
+def _cockpit_summen(zeilen):
+    def summe(feld):
+        return sum((z[feld] or Decimal("0") for z in zeilen), Decimal("0"))
+
+    return {
+        "faelle": len(zeilen),
+        "hochrechnung": summe("hochrechnung"),
+        "abschlaege": summe("abschlaege"),
+        "spitze_rest": summe("spitze_rest"),
+        "bezahlt": summe("bezahlt"),
+        "offen": summe("offen"),
+    }
+
+
+@login_required
+def cockpit(request):
+    current_year = now().year
+    try:
+        jahr = int(request.GET.get("jahr", current_year))
+    except (TypeError, ValueError):
+        jahr = current_year
+
+    zeilen = _cockpit_zeilen(jahr)
+    context = {
+        "jahr": jahr,
+        "jahre": [current_year - 1, current_year, current_year + 1],
+        "zeilen": zeilen,
+        "summen": _cockpit_summen(zeilen),
+        "stufen_kopf": [label for _, label in COCKPIT_STUFEN],
+    }
+    return render(request, "mbw/cockpit.html", context)
+
+
+@login_required
+def cockpit_export(request):
+    from django.http import HttpResponse
+
+    from . import fall_export
+
+    current_year = now().year
+    try:
+        jahr = int(request.GET.get("jahr", current_year))
+    except (TypeError, ValueError):
+        jahr = current_year
+
+    zeilen = _cockpit_zeilen(jahr)
+    puffer = fall_export.cockpit_mappe(jahr, zeilen, _cockpit_summen(zeilen), COCKPIT_STUFEN)
+    antwort = HttpResponse(
+        puffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    antwort["Content-Disposition"] = f'attachment; filename="Jahres-Cockpit-{jahr}.xlsx"'
+    return antwort

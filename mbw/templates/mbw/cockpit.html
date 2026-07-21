@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Jahres-Cockpit {{ jahr }}{% endblock %}
+{% block content %}
+<div class="min-h-screen">
+  <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
+    <div class="p-6 flex items-center">
+      <h1 class="text-3xl font-bold flex-auto">Jahres-Cockpit {{ jahr }}</h1>
+      <div class="flex-none space-x-2">
+        <a class="btn btn-outline" href="{% url 'cockpit_export' %}?jahr={{ jahr }}">📥 Excel-Export</a>
+        <a class="btn btn-primary" href="{% url 'mbw' %}">MBW</a>
+      </div>
+    </div>
+
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {{ summen.faelle }} Abrechnungsfälle · Hochrechnung {{ summen.hochrechnung }} € ·
+      Abschläge {{ summen.abschlaege }} € · Rest {{ summen.spitze_rest }} € ·
+      bezahlt {{ summen.bezahlt }} € · <span class="font-semibold">offen {{ summen.offen }} €</span>
+    </div>
+
+    <div class="flex space-x-2 p-4">
+      <div class="flex-1/5 p-4 border border-base-200 rounded-box shadow-lg bg-base-200">
+        <form method="get" action="{% url 'cockpit' %}" class="space-y-2">
+          <select name="jahr" class="select select-bordered w-full">
+            {% for j in jahre %}
+              <option value="{{ j }}" {% if j == jahr %}selected{% endif %}>{{ j }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary w-full" type="submit">Jahr wählen</button>
+        </form>
+
+        <div class="divider divider-primary">Legende</div>
+        <ul class="text-xs space-y-1 text-base-content/70">
+          <li><span class="text-success font-bold">✓</span> Stufe erledigt</li>
+          <li><span class="text-base-content/40">–</span> offen</li>
+          <li>Kalk. → Q1/Q2/Q3 → SAP → Spitze → Rechn. → Status</li>
+        </ul>
+
+        <div class="divider divider-primary">Navigation</div>
+        {% include "includes/sidemenu.html" %}
+      </div>
+
+      <div class="flex-4/5 p-4 border border-base-200 rounded-box shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Stelle / IA</th>
+                {% for label in stufen_kopf %}<th class="text-center">{{ label }}</th>{% endfor %}
+                <th>Status</th>
+                <th class="text-right">Hochr.</th>
+                <th class="text-right">Abschl.</th>
+                <th class="text-right">Rest</th>
+                <th class="text-right">Bezahlt</th>
+                <th class="text-right">Offen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in zeilen %}
+              <tr class="hover">
+                <td>
+                  <a class="link link-primary font-medium" href="{% url 'jahresakte' row.einsatz.pk jahr %}">
+                    {{ row.einsatz.mitarbeiter.nachname }}, {{ row.einsatz.mitarbeiter.vorname }}
+                  </a>
+                  <div class="text-xs text-base-content/50">Pers.Nr. {{ row.einsatz.mitarbeiter.personalnummer }}</div>
+                </td>
+                <td class="text-xs">
+                  {{ row.einsatz.stelle.name }}
+                  {% if row.innenauftrag %}<div class="text-base-content/50">{{ row.innenauftrag.nummer }}</div>{% endif %}
+                </td>
+                {% for label, done in row.stufen_liste %}
+                <td class="text-center">
+                  {% if done %}<span class="text-success font-bold">✓</span>{% else %}<span class="text-base-content/40">–</span>{% endif %}
+                </td>
+                {% endfor %}
+                <td>
+                  {% if row.status == 'ausgeglichen' %}<span class="badge badge-success badge-sm">Ausgeglichen</span>
+                  {% elif row.status == 'teilweise' %}<span class="badge badge-warning badge-sm">Teilweise</span>
+                  {% elif row.status == 'offen' %}<span class="badge badge-ghost badge-sm">Offen</span>
+                  {% else %}<span class="text-base-content/40 text-xs">–</span>{% endif %}
+                </td>
+                <td class="text-right font-mono text-xs">{{ row.hochrechnung|default_if_none:"" }}</td>
+                <td class="text-right font-mono text-xs">{{ row.abschlaege }}</td>
+                <td class="text-right font-mono text-xs">{{ row.spitze_rest|default_if_none:"" }}</td>
+                <td class="text-right font-mono text-xs">{{ row.bezahlt }}</td>
+                <td class="text-right font-mono text-xs {% if row.offen > 0 %}text-warning{% endif %}">{{ row.offen }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="14" class="text-center text-base-content/60">Keine Abrechnungs-Einsätze für {{ jahr }}.</td></tr>
+              {% endfor %}
+            </tbody>
+            {% if zeilen %}
+            <tfoot>
+              <tr class="font-bold bg-base-200">
+                <td colspan="2">Summe ({{ summen.faelle }})</td>
+                {% for label in stufen_kopf %}<td></td>{% endfor %}
+                <td></td>
+                <td class="text-right font-mono">{{ summen.hochrechnung }}</td>
+                <td class="text-right font-mono">{{ summen.abschlaege }}</td>
+                <td class="text-right font-mono">{{ summen.spitze_rest }}</td>
+                <td class="text-right font-mono">{{ summen.bezahlt }}</td>
+                <td class="text-right font-mono">{{ summen.offen }}</td>
+              </tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
