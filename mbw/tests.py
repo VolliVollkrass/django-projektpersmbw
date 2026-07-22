@@ -632,3 +632,123 @@ class CockpitTest(TestCase):
         # Beispielperson taucht in Spalte A auf
         werte = [ws.cell(row=r, column=1).value for r in range(1, ws.max_row + 1)]
         self.assertIn("Mustermann, Eva", werte)
+
+
+class StammdatenServiceTest(TestCase):
+    def test_betrag_parsen(self):
+        self.assertIsNone(services.betrag_parsen(""))
+        self.assertIsNone(services.betrag_parsen(None))
+        self.assertEqual(services.betrag_parsen("3.050,50"), Decimal("3050.50"))
+        self.assertEqual(services.betrag_parsen("3050"), Decimal("3050.00"))
+        with self.assertRaises(ValueError):
+            services.betrag_parsen("abc")
+
+    def test_besoldungstabelle_speichern_upsert_und_delete(self):
+        tabelle = Besoldungstabelle.objects.create(gueltig_ab=date(2025, 1, 1))
+        Besoldungsbetrag.objects.create(tabelle=tabelle, gruppe="A10", stufe=1, betrag=Decimal("3000"))
+        Besoldungsbetrag.objects.create(tabelle=tabelle, gruppe="A10", stufe=2, betrag=Decimal("3100"))
+
+        services.besoldungstabelle_speichern(
+            tabelle, date(2025, 1, 1), "neu",
+            {("A10", 1): Decimal("3050.00"), ("A10", 2): None, ("A11", 1): Decimal("3300.00")},
+        )
+        self.assertEqual(
+            Besoldungsbetrag.objects.get(tabelle=tabelle, gruppe="A10", stufe=1).betrag,
+            Decimal("3050.00"),
+        )
+        self.assertFalse(Besoldungsbetrag.objects.filter(tabelle=tabelle, gruppe="A10", stufe=2).exists())
+        self.assertEqual(
+            Besoldungsbetrag.objects.get(tabelle=tabelle, gruppe="A11", stufe=1).betrag,
+            Decimal("3300.00"),
+        )
+
+    def test_gueltig_ab_kollision_wirft_fehler(self):
+        Besoldungstabelle.objects.create(gueltig_ab=date(2024, 1, 1))
+        tabelle = Besoldungstabelle.objects.create(gueltig_ab=date(2025, 1, 1))
+        with self.assertRaises(ValueError):
+            services.besoldungstabelle_speichern(tabelle, date(2024, 1, 1), "", {})
+
+
+@override_settings(STORAGES=OHNE_MANIFEST)
+class BesoldungEditorViewTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Permission
+
+        self.tabelle = Besoldungstabelle.objects.create(gueltig_ab=date(2025, 1, 1))
+        Besoldungsbetrag.objects.create(tabelle=self.tabelle, gruppe="A10", stufe=1, betrag=Decimal("3000"))
+        Besoldungsbetrag.objects.create(tabelle=self.tabelle, gruppe="A10", stufe=2, betrag=Decimal("3100"))
+        self.user = User.objects.create_user("sb", password="x")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename="change_besoldungstabelle"),
+            Permission.objects.get(codename="add_besoldungstabelle"),
+        )
+        self.client.force_login(self.user)
+
+    def test_direkt_bearbeiten_speichert(self):
+        antwort = self.client.post(
+            reverse("besoldungstabelle_detail", args=[self.tabelle.pk]),
+            {"gueltig_ab": "2025-01-01", "bemerkung": "Korrektur", "stufen": "1,2",
+             "b_A10_1": "3050,00", "b_A10_2": ""},
+        )
+        self.assertRedirects(antwort, reverse("besoldungstabelle_detail", args=[self.tabelle.pk]))
+        self.assertEqual(
+            Besoldungsbetrag.objects.get(tabelle=self.tabelle, gruppe="A10", stufe=1).betrag,
+            Decimal("3050.00"),
+        )
+        self.assertFalse(Besoldungsbetrag.objects.filter(tabelle=self.tabelle, gruppe="A10", stufe=2).exists())
+
+    def test_neue_tabelle_als_kopie(self):
+        antwort = self.client.get(reverse("besoldungstabelle_neu"))
+        self.assertEqual(antwort.status_code, 200)
+        self.assertContains(antwort, "3000")  # aus jüngster Tabelle vorbelegt
+
+        self.client.post(
+            reverse("besoldungstabelle_neu"),
+            {"gueltig_ab": "2026-01-01", "bemerkung": "", "stufen": "1,2",
+             "b_A10_1": "3200,00", "b_A10_2": "3300,00"},
+        )
+        neu = Besoldungstabelle.objects.get(gueltig_ab=date(2026, 1, 1))
+        self.assertEqual(
+            Besoldungsbetrag.objects.get(tabelle=neu, gruppe="A10", stufe=1).betrag,
+            Decimal("3200.00"),
+        )
+
+    def test_ohne_recht_kein_speichern(self):
+        leser = User.objects.create_user("leser", password="x")
+        self.client.force_login(leser)
+        antwort = self.client.post(
+            reverse("besoldungstabelle_detail", args=[self.tabelle.pk]),
+            {"gueltig_ab": "2025-01-01", "stufen": "1,2", "b_A10_1": "9999"},
+        )
+        self.assertEqual(antwort.status_code, 403)
+        self.assertEqual(
+            Besoldungsbetrag.objects.get(tabelle=self.tabelle, gruppe="A10", stufe=1).betrag,
+            Decimal("3000"),
+        )
+
+
+@override_settings(STORAGES=OHNE_MANIFEST)
+class FzEditorViewTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import Permission
+
+        self.tabelle = Familienzuschlagtabelle.objects.create(gueltig_ab=date(2025, 1, 1))
+        Familienzuschlagzeile.objects.create(tabelle=self.tabelle, ortsklasse="II", stufe_l=Decimal("100"))
+        self.user = User.objects.create_user("sb", password="x")
+        self.user.user_permissions.add(
+            Permission.objects.get(codename="change_familienzuschlagtabelle"),
+        )
+        self.client.force_login(self.user)
+
+    def test_zeile_und_kindererhoehung_speichern(self):
+        antwort = self.client.post(
+            reverse("fz_tabelle_detail", args=[self.tabelle.pk]),
+            {"gueltig_ab": "2025-01-01", "bemerkung": "", "z_II_stufe_l": "150", "k_A8_II": "50"},
+        )
+        self.assertRedirects(antwort, reverse("fz_tabelle_detail", args=[self.tabelle.pk]))
+        zeile = Familienzuschlagzeile.objects.get(tabelle=self.tabelle, ortsklasse="II")
+        self.assertEqual(zeile.stufe_l, Decimal("150.00"))
+        self.assertEqual(
+            FZKinderErhoehung.objects.get(tabelle=self.tabelle, gruppe="A8", ortsklasse="II").betrag,
+            Decimal("50.00"),
+        )

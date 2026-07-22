@@ -5,64 +5,112 @@
 <div class="min-h-screen">
   <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
     <div class="p-6 flex items-center">
-      <h1 class="text-3xl font-bold flex-auto">Orts- und Familienzuschlag ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}</h1>
+      <h1 class="text-3xl font-bold flex-auto">
+        {% if ist_neu %}Neue OFZ-Tabelle{% else %}Orts- und Familienzuschlag ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}{% endif %}
+      </h1>
       <a class="btn btn-primary" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
     </div>
 
-    <div class="px-6 pb-2 text-sm text-base-content/70">
-      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}
-      {{ tabelle.bemerkung }}
-    </div>
+    {% if kann_bearbeiten %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="px-6 flex flex-wrap gap-4 items-end">
+        <div>
+          <label class="text-xs block" for="gueltig_ab">Gültig ab</label>
+          <input type="date" id="gueltig_ab" name="gueltig_ab"
+                 value="{{ tabelle.gueltig_ab|date:'Y-m-d' }}" class="input input-bordered" required>
+        </div>
+        <div class="flex-auto min-w-60">
+          <label class="text-xs block" for="bemerkung">Bemerkung</label>
+          <input type="text" id="bemerkung" name="bemerkung" value="{{ tabelle.bemerkung }}"
+                 class="input input-bordered w-full" placeholder="z. B. Tarifrunde 2026">
+        </div>
+      </div>
+      {% if ist_neu %}
+      <p class="px-6 pt-2 text-xs text-base-content/60">Werte aus der jüngsten Tabelle vorbelegt – Datum setzen, anpassen, speichern.</p>
+      {% endif %}
 
-    <div class="p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div class="p-6 space-y-6">
+        <div class="overflow-x-auto">
+          <h2 class="font-semibold mb-2">Monatsbeträge je Ortsklasse</h2>
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Ortsklasse</th>{% for feld, label in felder %}<th class="text-right">{{ label }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for zeile in zeilen %}
+              <tr>
+                <td class="font-bold text-primary">{{ zeile.label }}</td>
+                {% for feld, wert in zeile.zellen %}
+                <td><input type="text" name="z_{{ zeile.wert }}_{{ feld }}" value="{{ wert|default_if_none:'' }}"
+                           inputmode="decimal" class="input input-bordered input-xs w-24 text-right font-mono"></td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="overflow-x-auto">
+          <h2 class="font-semibold mb-2">Erhöhungsbeträge je Kind (A 8 – A 10)</h2>
+          <table class="table table-sm">
+            <thead>
+              <tr><th>Gruppe</th>{% for wert, label in ortsklassen %}<th class="text-right">{{ label }}</th>{% endfor %}</tr>
+            </thead>
+            <tbody>
+              {% for reihe in kinder %}
+              <tr>
+                <td class="font-bold text-primary">{{ reihe.gruppe }}</td>
+                {% for wert, betrag in reihe.zellen %}
+                <td><input type="text" name="k_{{ reihe.gruppe }}_{{ wert }}" value="{{ betrag|default_if_none:'' }}"
+                           inputmode="decimal" class="input input-bordered input-xs w-24 text-right font-mono"></td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="px-6 pb-6 flex gap-2">
+        <button class="btn btn-primary" type="submit">Speichern</button>
+        {% if not ist_neu %}<a class="btn btn-ghost" href="{% url 'fz_tabelle_detail' tabelle.pk %}">Zurücksetzen</a>{% endif %}
+      </div>
+    </form>
+
+    {% else %}
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}{{ tabelle.bemerkung }}
+    </div>
+    <div class="p-6 space-y-6">
       <div class="overflow-x-auto">
         <h2 class="font-semibold mb-2">Monatsbeträge je Ortsklasse</h2>
         <table class="table table-sm table-zebra">
-          <thead>
-            <tr>
-              <th>Ortsklasse</th>
-              <th class="text-right">Stufe L</th>
-              <th class="text-right">Stufe V</th>
-              <th class="text-right">Stufe 1</th>
-              <th class="text-right">Stufe 2</th>
-              <th class="text-right">zzgl. 3. Kind</th>
-              <th class="text-right">zzgl. je weiterem Kind</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Ortsklasse</th>{% for feld, label in felder %}<th class="text-right">{{ label }}</th>{% endfor %}</tr></thead>
           <tbody>
             {% for zeile in zeilen %}
-            <tr>
-              <td class="font-bold text-primary">{{ zeile.ortsklasse }}</td>
-              <td class="text-right">{{ zeile.stufe_l|default_if_none:"–" }}</td>
-              <td class="text-right">{{ zeile.stufe_v|default_if_none:"–" }}</td>
-              <td class="text-right">{{ zeile.stufe_1|default_if_none:"–" }}</td>
-              <td class="text-right">{{ zeile.stufe_2|default_if_none:"–" }}</td>
-              <td class="text-right">{{ zeile.kind_3|default_if_none:"–" }}</td>
-              <td class="text-right">{{ zeile.kind_weitere|default_if_none:"–" }}</td>
+            <tr><td class="font-bold text-primary">{{ zeile.label }}</td>
+              {% for feld, wert in zeile.zellen %}<td class="text-right font-mono">{{ wert|default_if_none:"–" }}</td>{% endfor %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-
       <div class="overflow-x-auto">
         <h2 class="font-semibold mb-2">Erhöhungsbeträge je Kind (A 8 – A 10)</h2>
-        <table class="table table-sm table-zebra max-w-md">
-          <thead>
-            <tr><th>Ortsklasse</th><th>Gruppe</th><th class="text-right">Betrag</th></tr>
-          </thead>
+        <table class="table table-sm table-zebra">
+          <thead><tr><th>Gruppe</th>{% for wert, label in ortsklassen %}<th class="text-right">{{ label }}</th>{% endfor %}</tr></thead>
           <tbody>
-            {% for erhoehung in kinder_erhoehungen %}
-            <tr>
-              <td>{{ erhoehung.ortsklasse }}</td>
-              <td class="font-bold text-primary">{{ erhoehung.gruppe }}</td>
-              <td class="text-right">{{ erhoehung.betrag }}</td>
+            {% for reihe in kinder %}
+            <tr><td class="font-bold text-primary">{{ reihe.gruppe }}</td>
+              {% for wert, betrag in reihe.zellen %}<td class="text-right font-mono">{{ betrag|default_if_none:"–" }}</td>{% endfor %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

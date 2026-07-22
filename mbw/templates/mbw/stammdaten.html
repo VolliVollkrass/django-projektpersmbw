@@ -42,7 +42,10 @@
             </div>
             <button class="btn btn-primary" type="submit">Fortschreiben</button>
           </form>
-          <p class="text-xs text-base-content/60">Neue Tabelle = jüngste Tabelle × (1 + Erhöhung), kaufmännisch gerundet.</p>
+          <div class="flex items-center gap-2 mt-1">
+            <p class="text-xs text-base-content/60 flex-auto">Fortschreiben = jüngste Tabelle × (1 + Erhöhung), kaufmännisch gerundet.</p>
+            <a class="btn btn-xs btn-outline" href="{% url 'besoldungstabelle_neu' %}">+ Neue Tabelle (direkt bearbeiten)</a>
+          </div>
           {% endif %}
         </div>
       </div>
@@ -78,6 +81,9 @@
             </div>
             <button class="btn btn-primary" type="submit">Fortschreiben</button>
           </form>
+          <div class="flex justify-end mt-1">
+            <a class="btn btn-xs btn-outline" href="{% url 'fz_tabelle_neu' %}">+ Neue Tabelle (direkt bearbeiten)</a>
+          </div>
           {% endif %}
         </div>
       </div>

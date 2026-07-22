@@ -5,36 +5,92 @@
 <div class="min-h-screen">
   <div class="m-6 border border-base-200 rounded-box shadow bg-base-100">
     <div class="p-6 flex items-center">
-      <h1 class="text-3xl font-bold flex-auto">Besoldungstabelle ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}</h1>
+      <h1 class="text-3xl font-bold flex-auto">
+        {% if ist_neu %}Neue Besoldungstabelle{% else %}Besoldungstabelle ab {{ tabelle.gueltig_ab|date:"d.m.Y" }}{% endif %}
+      </h1>
       <a class="btn btn-primary" href="{% url "mbw_stammdaten" %}">Stammdaten</a>
     </div>
 
-    <div class="px-6 pb-2 text-sm text-base-content/70">
-      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}
-      {{ tabelle.bemerkung }}
-    </div>
+    {% if kann_bearbeiten %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="stufen" value="{{ stufen_csv }}">
 
+      <div class="px-6 flex flex-wrap gap-4 items-end">
+        <div>
+          <label class="text-xs block" for="gueltig_ab">Gültig ab</label>
+          <input type="date" id="gueltig_ab" name="gueltig_ab"
+                 value="{{ tabelle.gueltig_ab|date:'Y-m-d' }}"
+                 class="input input-bordered" required>
+        </div>
+        <div class="flex-auto min-w-60">
+          <label class="text-xs block" for="bemerkung">Bemerkung</label>
+          <input type="text" id="bemerkung" name="bemerkung" value="{{ tabelle.bemerkung }}"
+                 class="input input-bordered w-full" placeholder="z. B. Tarifrunde 2026">
+        </div>
+      </div>
+
+      {% if ist_neu %}
+      <p class="px-6 pt-2 text-xs text-base-content/60">
+        Werte sind aus der jüngsten Tabelle vorbelegt – Datum setzen, Beträge anpassen, speichern.
+      </p>
+      {% endif %}
+
+      <div class="p-6 overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Gruppe</th>
+              {% for stufe in stufen %}<th class="text-right">Stufe {{ stufe }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for zeile in zeilen %}
+            <tr>
+              <td class="font-bold text-primary">{{ zeile.gruppe }}</td>
+              {% for stufe, wert in zeile.werte %}
+              <td>
+                <input type="text" name="b_{{ zeile.gruppe }}_{{ stufe }}"
+                       value="{{ wert|default_if_none:'' }}" inputmode="decimal"
+                       class="input input-bordered input-xs w-24 text-right font-mono">
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="text-xs text-base-content/60 mt-2">
+          Monatsbeträge in Euro. Leere Zellen werden nicht gespeichert (bzw. entfernt).
+        </p>
+      </div>
+
+      <div class="px-6 pb-6 flex gap-2">
+        <button class="btn btn-primary" type="submit">Speichern</button>
+        {% if not ist_neu %}<a class="btn btn-ghost" href="{% url 'besoldungstabelle_detail' tabelle.pk %}">Zurücksetzen</a>{% endif %}
+      </div>
+    </form>
+
+    {% else %}
+    <div class="px-6 pb-2 text-sm text-base-content/70">
+      {% if tabelle.erhoehung_prozent %}Erhöhung: +{{ tabelle.erhoehung_prozent }} % · {% endif %}{{ tabelle.bemerkung }}
+    </div>
     <div class="p-6 overflow-x-auto">
       <table class="table table-sm table-zebra">
         <thead>
-          <tr>
-            <th>Gruppe</th>
-            {% for stufe in stufen %}<th class="text-right">Stufe {{ stufe }}</th>{% endfor %}
-          </tr>
+          <tr><th>Gruppe</th>{% for stufe in stufen %}<th class="text-right">Stufe {{ stufe }}</th>{% endfor %}</tr>
         </thead>
         <tbody>
           {% for zeile in zeilen %}
           <tr>
             <td class="font-bold text-primary">{{ zeile.gruppe }}</td>
-            {% for wert in zeile.werte %}
-            <td class="text-right">{% if wert %}{{ wert }}{% else %}–{% endif %}</td>
-            {% endfor %}
+            {% for stufe, wert in zeile.werte %}<td class="text-right font-mono">{% if wert is not None %}{{ wert }}{% else %}–{% endif %}</td>{% endfor %}
           </tr>
           {% endfor %}
         </tbody>
       </table>
       <p class="text-xs text-base-content/60 mt-2">Monatsbeträge in Euro.</p>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

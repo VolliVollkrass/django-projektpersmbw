@@ -19,6 +19,7 @@ from .forms import (
     ZahlungseingangForm,
 )
 from .models import (
+    BESOLDUNGSGRUPPEN,
     Beihilfesatz,
     Besoldungstabelle,
     Debitor,
@@ -452,20 +453,81 @@ def stammdaten(request):
     return render(request, "mbw/stammdaten.html", context)
 
 
+def _besoldung_stufen(vorlage, request):
+    """Stufen-Spalten des Rasters: beim Speichern aus dem Formular, sonst aus der Vorlage."""
+    if request.method == "POST" and request.POST.get("stufen"):
+        return [int(s) for s in request.POST["stufen"].split(",") if s.strip().isdigit()]
+    vorhandene = sorted({b.stufe for b in vorlage.betraege.all()}) if vorlage else []
+    max_stufe = max(vorhandene) if vorhandene else 8
+    return list(range(1, max_stufe + 1))
+
+
+def _besoldungstabelle_bearbeiten(request, tabelle, vorlage):
+    from datetime import date as _date
+
+    from django.core.exceptions import PermissionDenied
+
+    stufen = _besoldung_stufen(vorlage, request)
+
+    if request.method == "POST":
+        perm = "mbw.change_besoldungstabelle" if tabelle else "mbw.add_besoldungstabelle"
+        if not request.user.has_perm(perm):
+            raise PermissionDenied
+
+        try:
+            gueltig_ab = _date.fromisoformat(request.POST.get("gueltig_ab", ""))
+        except ValueError:
+            gueltig_ab = None
+        bemerkung = request.POST.get("bemerkung", "").strip()
+
+        try:
+            betrag_map = {
+                (gruppe, stufe): services.betrag_parsen(request.POST.get(f"b_{gruppe}_{stufe}", ""))
+                for gruppe, _ in BESOLDUNGSGRUPPEN
+                for stufe in stufen
+            }
+            tabelle = services.besoldungstabelle_speichern(tabelle, gueltig_ab, bemerkung, betrag_map)
+        except ValueError as fehler:
+            messages.error(request, str(fehler))
+        else:
+            messages.success(request, f"{tabelle} gespeichert.")
+            return redirect("besoldungstabelle_detail", pk=tabelle.pk)
+
+    quelle = tabelle or vorlage
+    matrix = {}
+    if quelle:
+        for betrag in quelle.betraege.all():
+            matrix.setdefault(betrag.gruppe, {})[betrag.stufe] = betrag.betrag
+    zeilen = [
+        {"gruppe": gruppe, "werte": [(stufe, matrix.get(gruppe, {}).get(stufe)) for stufe in stufen]}
+        for gruppe, _ in BESOLDUNGSGRUPPEN
+    ]
+    context = {
+        "tabelle": tabelle,
+        "stufen": stufen,
+        "stufen_csv": ",".join(str(s) for s in stufen),
+        "zeilen": zeilen,
+        "ist_neu": tabelle is None,
+        "kann_bearbeiten": request.user.has_perm(
+            "mbw.change_besoldungstabelle" if tabelle else "mbw.add_besoldungstabelle"
+        ),
+    }
+    return render(request, "mbw/besoldungstabelle_detail.html", context)
+
+
 @login_required
 def besoldungstabelle_detail(request, pk):
-    tabelle = get_object_or_404(Besoldungstabelle, pk=pk)
-    betraege = tabelle.betraege.all()
-    stufen = sorted({b.stufe for b in betraege})
-    matrix = {}
-    for betrag in betraege:
-        matrix.setdefault(betrag.gruppe, {})[betrag.stufe] = betrag.betrag
-    zeilen = [
-        {"gruppe": gruppe, "werte": [matrix[gruppe].get(stufe) for stufe in stufen]}
-        for gruppe in sorted(matrix, key=lambda g: int(g[1:]))
-    ]
-    context = {"tabelle": tabelle, "stufen": stufen, "zeilen": zeilen}
-    return render(request, "mbw/besoldungstabelle_detail.html", context)
+    from .models import Besoldungstabelle as _Bt
+
+    tabelle = get_object_or_404(_Bt, pk=pk)
+    return _besoldungstabelle_bearbeiten(request, tabelle, vorlage=tabelle)
+
+
+@login_required
+@permission_required("mbw.add_besoldungstabelle", raise_exception=True)
+def besoldungstabelle_neu(request):
+    vorlage = Besoldungstabelle.objects.order_by("-gueltig_ab").first()
+    return _besoldungstabelle_bearbeiten(request, None, vorlage=vorlage)
 
 
 @login_required
@@ -487,15 +549,102 @@ def besoldungstabelle_erhoehen(request):
     return redirect("mbw_stammdaten")
 
 
+FZ_FELDER = [
+    ("stufe_l", "Stufe L"), ("stufe_v", "Stufe V"),
+    ("stufe_1", "Stufe 1"), ("stufe_2", "Stufe 2"),
+    ("kind_3", "3. Kind"), ("kind_weitere", "je weit. Kind"),
+]
+FZ_KINDER_GRUPPEN = ["A8", "A9", "A10"]
+
+
+def _fz_tabelle_bearbeiten(request, tabelle, vorlage):
+    from datetime import date as _date
+
+    from django.core.exceptions import PermissionDenied
+
+    from .models import ORTSKLASSEN
+
+    ortsklassen = list(ORTSKLASSEN.choices)
+
+    if request.method == "POST":
+        perm = "mbw.change_familienzuschlagtabelle" if tabelle else "mbw.add_familienzuschlagtabelle"
+        if not request.user.has_perm(perm):
+            raise PermissionDenied
+
+        try:
+            gueltig_ab = _date.fromisoformat(request.POST.get("gueltig_ab", ""))
+        except ValueError:
+            gueltig_ab = None
+        bemerkung = request.POST.get("bemerkung", "").strip()
+
+        try:
+            zeilen_map = {
+                wert: {
+                    feld: services.betrag_parsen(request.POST.get(f"z_{wert}_{feld}", ""))
+                    for feld, _ in FZ_FELDER
+                }
+                for wert, _ in ortsklassen
+            }
+            kinder_map = {
+                (gruppe, wert): services.betrag_parsen(request.POST.get(f"k_{gruppe}_{wert}", ""))
+                for gruppe in FZ_KINDER_GRUPPEN
+                for wert, _ in ortsklassen
+            }
+            tabelle = services.fz_tabelle_speichern(
+                tabelle, gueltig_ab, bemerkung, zeilen_map, kinder_map
+            )
+        except ValueError as fehler:
+            messages.error(request, str(fehler))
+        else:
+            messages.success(request, f"{tabelle} gespeichert.")
+            return redirect("fz_tabelle_detail", pk=tabelle.pk)
+
+    quelle = tabelle or vorlage
+    zeilen_werte = {z.ortsklasse: z for z in quelle.zeilen.all()} if quelle else {}
+    kinder_werte = {
+        (k.gruppe, k.ortsklasse): k.betrag for k in quelle.kinder_erhoehungen.all()
+    } if quelle else {}
+
+    zeilen = [
+        {
+            "wert": wert, "label": label,
+            "zellen": [
+                (feld, getattr(zeilen_werte.get(wert), feld, None))
+                for feld, _ in FZ_FELDER
+            ],
+        }
+        for wert, label in ortsklassen
+    ]
+    kinder = [
+        {"gruppe": gruppe, "zellen": [(wert, kinder_werte.get((gruppe, wert))) for wert, _ in ortsklassen]}
+        for gruppe in FZ_KINDER_GRUPPEN
+    ]
+
+    context = {
+        "tabelle": tabelle,
+        "felder": FZ_FELDER,
+        "ortsklassen": ortsklassen,
+        "zeilen": zeilen,
+        "kinder": kinder,
+        "ist_neu": tabelle is None,
+        "kann_bearbeiten": request.user.has_perm(
+            "mbw.change_familienzuschlagtabelle" if tabelle else "mbw.add_familienzuschlagtabelle"
+        ),
+    }
+    return render(request, "mbw/fz_tabelle_detail.html", context)
+
+
 @login_required
 def fz_tabelle_detail(request, pk):
     tabelle = get_object_or_404(Familienzuschlagtabelle, pk=pk)
-    context = {
-        "tabelle": tabelle,
-        "zeilen": tabelle.zeilen.all(),
-        "kinder_erhoehungen": tabelle.kinder_erhoehungen.all(),
-    }
-    return render(request, "mbw/fz_tabelle_detail.html", context)
+    return _fz_tabelle_bearbeiten(request, tabelle, vorlage=tabelle)
+
+
+@login_required
+@permission_required("mbw.add_familienzuschlagtabelle", raise_exception=True)
+def fz_tabelle_neu(request):
+    vorlage = Familienzuschlagtabelle.objects.order_by("-gueltig_ab").first()
+    return _fz_tabelle_bearbeiten(request, None, vorlage=vorlage)
 
 
 @login_required
